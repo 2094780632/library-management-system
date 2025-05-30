@@ -1041,6 +1041,53 @@ MenuState query_book(vector<Book>& book_list){
     return MANAGE_BOOK;
 }
 
+MenuState add_book(vector<Book>& book_list){
+    log("添加新的图书");
+    return MANAGE_BOOK;
+}
+
+MenuState del_book(vector<Book>& book_list){
+    log("删除已有图书");
+    return MANAGE_BOOK;
+}
+
+MenuState edit_book(vector<Book>& book_list){
+    log("编辑指定图书");
+    return MANAGE_BOOK;
+}
+
+//用户管理菜单
+MenuState manage_user_menu(){
+    log("进入用户管理菜单");
+    return MAIN;
+}
+
+MenuState query_user(vector<User>& user_list){
+    log("查询所有用户信息");
+    return MANAGE_USER;
+}
+
+MenuState add_user(vector<User>& user_list){
+    log("添加新的用户信息");
+    return MANAGE_USER;
+}
+
+MenuState del_user(vector<User>& user_list){
+    log("删除已有用户信息");
+    return MANAGE_USER;
+}
+
+MenuState edit_user(vector<User>& user_list){
+    log("修改指定用户信息");
+    return MANAGE_USER;
+}
+
+//图书报损菜单
+MenuState report_book_menu(){
+    log("进入图书报损菜单");
+    return MAIN;
+}
+
 
 int main(){
     log("-----程序启动-----");
@@ -1095,6 +1142,41 @@ int main(){
                 case QUERY_BOOK:
                     menu_state=query_book(BookList);
                     break;
+
+                case ADD_BOOK:
+                    menu_state=add_book(BookList);
+                    break;
+                
+                case DEL_BOOK:
+                    menu_state=del_book(BookList);
+                    break;
+                
+                case EDIT_BOOK:
+                    menu_state=edit_book(BookList);
+                    break;
+            
+            case MANAGE_USER:
+                menu_state=manage_user_menu();
+                break;
+                
+                case QUERY_USER:
+                menu_state=query_user(UserList);
+                break;
+
+                case ADD_USER:
+                menu_state=add_user(UserList);
+                break;
+
+                case DEL_USER:
+                menu_state=del_user(UserList);
+                break;
+
+                case EDIT_USER:
+                menu_state=edit_user(UserList);
+                break;
+
+
+
             default:
                 menu_state=EXIT;
                 break;
