@@ -15,7 +15,7 @@ using namespace std;
 #define LOG "log.txt"//存放日志的文件
 #define BOOKCSV "test.csv"//存放图书数据的文件
 #define USERCSV "user.csv"//存放用户数据的文件  
-#define TAB 15//TAB制表符长度
+#define TAB 12//TAB制表符长度
 #define BRIEFTAB 30//简要信息制表符长度
 
 //log预声明
@@ -32,9 +32,9 @@ inline void pause(){system("pause");}
 //一个自带换行的内联输出函数
 inline void o(const string &text){cout<<text<<endl;}
 //一个制表符长短可控的内联输出函数
-inline void o(const string &text,int t){cout<<setw(t)<<text;}
+inline void o(const string &text,int t){cout<<text<<setw(t);}
 //一个输出指定小数位数带制表符的内联输出函数
-inline void o(const double &d,int a,int t){cout<<fixed<<setprecision(a)<<setw(t)<<d;}
+inline void o(const double &d,int a,int t){cout<<d<<fixed<<setprecision(a)<<setw(t);}
 //整型映射到普通输出
 inline void o(const int a){o(to_string(a));}
 inline void o(const int a,int t){o(to_string(a),TAB);}
@@ -384,18 +384,12 @@ bool book_exist(vector<Book>& book_list,string isbn){
 }
 
 //按照指定方式返回符合条件的书本对象
-vector<Book> Booklist_search(vector<Book>& book_list,string key,string (Book::*pfunc)() const){
-    vector<Book> target_list;
+Book& Booklist_search(vector<Book>& book_list,string key,string (Book::*pfunc)() const){
     for(auto& book:book_list){
-        if((book.*pfunc)()==key){target_list.push_back(book);}
+        if((book.*pfunc)()==key){return book;}
     }
-    //log("cash");
-    if(target_list.empty()){
-        log("无法找到指定书目,key:"+key);
-        throw runtime_error("无法找到指定书目");
-    }
-    return target_list;
-    //log("done");
+    log("无法找到指定书目,key:"+key);
+    throw runtime_error("无法找到指定书目");
 }
 
 /*弃用方法 
@@ -713,12 +707,6 @@ MenuState borrow_menu(vector<Book>& book_list,vector<User>& user_list){
         return MAIN;
     }
 
-    //黑名单用户不准借书
-    if(Userlist_element(user_list,username).STATUS()=="B"){
-        op("该用户已被列入黑名单，无法借书！");
-        return MAIN;
-    }
-
     cls();
     Booklist_briefheading(true);
 
@@ -882,7 +870,7 @@ MenuState search_menu(){
 MenuState search_book_by_title(vector<Book>& book_list){
     log("按书名查书");
     string searchbookname;
-    vector<Book> target;
+    Book target;
     bool retry=true;
     string (Book::*pfunc)() const=&Book::TITLE;
 
@@ -902,9 +890,7 @@ MenuState search_book_by_title(vector<Book>& book_list){
         }
     }
     Booklist_infoheading();
-    for(auto& book:target){
-        book.showinfo();
-    }
+    target.showinfo();
     pause();
     return SEARCH_BOOK;
 }
@@ -912,7 +898,7 @@ MenuState search_book_by_title(vector<Book>& book_list){
 MenuState search_book_by_author(vector<Book>& book_list){
     log("按作者查书");
     string searchbookauthor;
-    vector<Book> target;
+    Book target;
     bool retry=true;
     string (Book::*pfunc)() const=&Book::AUTHOR;
 
@@ -932,9 +918,7 @@ MenuState search_book_by_author(vector<Book>& book_list){
         }
     }
     Booklist_infoheading();
-    for(auto& book:target){
-        book.showinfo();
-    }
+    target.showinfo();
     pause();
     return SEARCH_BOOK;
 }
@@ -943,7 +927,7 @@ MenuState search_book_by_user(vector<Book>& book_list,vector<User>& user_list){
     log("按借阅人查书");
     cls();
     string searchbookuser;
-    vector<Book> target;
+    Book target;
     vector<string> target_string;
     string (Book::*pfunc)() const=&Book::ISBN;
 
@@ -958,7 +942,8 @@ MenuState search_book_by_user(vector<Book>& book_list,vector<User>& user_list){
     }else{
         Booklist_infoheading();
         for(auto& isbn:target_string){
-            Booklist_isbn(book_list,isbn).showinfo();
+            target=Booklist_search(book_list,isbn,pfunc);
+            target.showinfo();
         }
     }
 
@@ -969,7 +954,7 @@ MenuState search_book_by_user(vector<Book>& book_list,vector<User>& user_list){
 MenuState search_book_by_isbn(vector<Book>& book_list){
     log("按ISBN查书");
     string searchbookisbn;
-    vector<Book> target;
+    Book target;
     bool retry=true;
     string (Book::*pfunc)() const=&Book::ISBN;
 
@@ -989,9 +974,7 @@ MenuState search_book_by_isbn(vector<Book>& book_list){
         }
     }
     Booklist_infoheading();
-    for(auto& book:target){
-        book.showinfo();
-    }
+    target.showinfo();
     pause();
     return SEARCH_BOOK;
 }
@@ -1040,6 +1023,7 @@ MenuState query_book(vector<Book>& book_list){
     pause();
     return MANAGE_BOOK;
 }
+
 
 
 int main(){

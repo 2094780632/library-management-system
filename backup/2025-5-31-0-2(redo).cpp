@@ -32,9 +32,9 @@ inline void pause(){system("pause");}
 //一个自带换行的内联输出函数
 inline void o(const string &text){cout<<text<<endl;}
 //一个制表符长短可控的内联输出函数
-inline void o(const string &text,int t){cout<<setw(t)<<text;}
+inline void o(const string &text,int t){cout<<text<<setw(t);}
 //一个输出指定小数位数带制表符的内联输出函数
-inline void o(const double &d,int a,int t){cout<<fixed<<setprecision(a)<<setw(t)<<d;}
+inline void o(const double &d,int a,int t){cout<<d<<fixed<<setprecision(a)<<setw(t);}
 //整型映射到普通输出
 inline void o(const int a){o(to_string(a));}
 inline void o(const int a,int t){o(to_string(a),TAB);}
@@ -1040,6 +1040,7 @@ MenuState query_book(vector<Book>& book_list){
     pause();
     return MANAGE_BOOK;
 }
+
 
 
 int main(){
