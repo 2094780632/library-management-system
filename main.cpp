@@ -1,5 +1,4 @@
 ///Windows cmd下的图书馆管理系统
-//智能科学与技术一班 2024413670 管航
 #include<iostream>
 #include<sstream>
 #include<fstream>
@@ -183,7 +182,6 @@ int log(const string &text){
 
 ///图书数据的构建
 //图书类
-
 class Book{
     public:
         //构造函数
@@ -635,7 +633,7 @@ bool login(vector<User>& user_list,string &puser){
     -退出程序
 */
 
-//菜单状态机！
+//菜单状态机
 enum MenuState{
     MAIN,
         BORROW_BOOK,
@@ -1097,7 +1095,6 @@ int main(){
 
     vector<User> UserList;
     Userlist_init(UserList,USERCSV);
-    //Userlist_info(UserList);
 
     pause();
 
@@ -1175,7 +1172,9 @@ int main(){
                 menu_state=edit_user(UserList);
                 break;
 
-
+            case REPORT_BOOK:
+                menu_state=report_book_menu();
+                break;
 
             default:
                 menu_state=EXIT;
