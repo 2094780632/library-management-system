@@ -440,10 +440,10 @@ class User{
         User(string n,string i,string s="N",vector<string> l={}):name(n),id(i),status(s),borrowed_list(l){};
 
         //获取单个属性
-        string NAME(){return name;}
-        string ID(){return id;}
-        string STATUS(){return status;}
-        vector<string> BORROWED_LIST(){return borrowed_list;}
+        string NAME() const{return name;}
+        string ID() const{return id;}
+        string STATUS() const{return status;}
+        vector<string> BORROWED_LIST() const{return borrowed_list;}
 
         //信息展示
         void showinfo(){
@@ -649,7 +649,7 @@ enum MenuState{
             ADD_USER,
             DEL_USER,
             EDIT_USER,
-        REPORT_DAMAGE,
+        REPORT_BOOK,
     EXIT
 };
 
@@ -686,7 +686,7 @@ MenuState main_menu(){
             return MANAGE_USER;
             break;
         case 6:
-            return REPORT_DAMAGE;
+            return REPORT_BOOK;
             break;
         case 7:
             return EXIT;
@@ -923,8 +923,31 @@ MenuState search_book_by_author(vector<Book>& book_list){
     return SEARCH_BOOK;
 }
 
-MenuState search_book_by_user(vector<Book>& book_list){
+MenuState search_book_by_user(vector<Book>& book_list,vector<User>& user_list){
     log("按借阅人查书");
+    cls();
+    string searchbookuser;
+    Book target;
+    vector<string> target_string;
+    string (Book::*pfunc)() const=&Book::ISBN;
+
+    string username;
+    if(!login(user_list,username)){
+        return SEARCH_BOOK;
+    }
+
+    target_string=Userlist_element(user_list,username).BORROWED_LIST();
+    if(vetostr(target_string)=="[]"){
+        o("无借阅！");
+    }else{
+        Booklist_infoheading();
+        for(auto& isbn:target_string){
+            target=Booklist_search(book_list,isbn,pfunc);
+            target.showinfo();
+        }
+    }
+
+    pause();
     return SEARCH_BOOK;
 }
 
@@ -995,7 +1018,7 @@ int main(){
                     break;
                 
                 case SEARCH_BOOK_BY_USER:
-                    menu_state=search_book_by_user(BookList);
+                    menu_state=search_book_by_user(BookList,UserList);
                     break;
                 
                 case SEARCH_BOOK_BY_ISBN:
