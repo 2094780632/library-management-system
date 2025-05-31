@@ -76,10 +76,32 @@ void i(int& v,int min,int max){
 }
 
 //输出提示符并接收输入
-template<typename T>
-void oi(T& i,string tip){
+void oi(string& in,string tip){
     cout<<tip<<':';
-    cin>>i;
+    i(in);
+}
+
+void oi(int& in,string tip){
+    cout<<tip<<':';
+    i(in);
+}
+
+void oi(double& in,string tip){
+    cout<<tip<<':';
+    i(in);
+}
+
+//确认
+bool c(string tip){
+    string in;
+    cout<<tip<<"(y/n):";
+    cin>>in;
+    while (in!="y"&&in!="n"){
+        oi(in,"请重新输入");
+    }
+    if(in=="y"){return true;}else if(in=="n"){return false;}
+    log("no return");
+    return false;
 }
 
 
@@ -1041,6 +1063,45 @@ MenuState query_book(vector<Book>& book_list){
 
 MenuState add_book(vector<Book>& book_list){
     log("添加新的图书");
+    string new_title,new_author,new_isbn,new_press,new_date;
+    double new_price;
+    int new_quantity,new_stock;
+
+    o("添加新的图书");
+    oi(new_title,"书名");
+    oi(new_author,"作者");
+
+    oi(new_isbn,"ISBN");
+    while(book_exist(book_list,new_isbn)){
+        oi(new_isbn,"该ISBN已存在！请重新输入");
+    }
+
+    oi(new_press,"出版社");
+    oi(new_date,"出版日期");
+
+    oi(new_price,"单价");
+    oi(new_quantity,"总数");
+    oi(new_stock,"库存");
+    while(new_stock>new_quantity){
+        oi(new_stock,"库存必须小于等于总数！请重新输入");
+    }
+    
+    
+    Book new_book(new_title,new_author,new_isbn,new_press,new_date,new_price,new_quantity,new_stock);
+    
+    Booklist_infoheading();
+    new_book.showinfo();
+    if(c("请确认新的图书信息")){
+        book_list.push_back(new_book);
+        Booklist_save(book_list,BOOKCSV);
+        log("确认添加新的图书信息");
+        return MANAGE_BOOK;
+    }else{
+        log("取消添加新的图书信息");
+        return MANAGE_BOOK;
+    }
+
+    pause();
     return MANAGE_BOOK;
 }
 
