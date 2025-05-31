@@ -28,6 +28,12 @@ inline void cls(){system("cls");}
 //pause
 inline void pause(){system("pause");}
 
+//窗口标题
+inline void title(const string& t){
+    string cmd="title "+t;
+    system(cmd.c_str());
+}
+
 //一个自带换行的内联输出函数
 inline void o(const string &text){cout<<text<<endl;}
 //一个制表符长短可控的内联输出函数
@@ -82,6 +88,11 @@ void oi(string& in,string tip){
 }
 
 void oi(int& in,string tip){
+    cout<<tip<<':';
+    i(in);
+}
+
+void oi(unsigned int& in,string tip){
     cout<<tip<<':';
     i(in);
 }
@@ -208,7 +219,7 @@ class Book{
     public:
         //构造函数
         Book(){}
-        Book(string t,string a,string i,string pre,string d,double pri,int q,int s):
+        Book(string t,string a,string i,string pre,string d,double pri,unsigned int q,unsigned int s):
         title(t),author(a),isbn(i),press(pre),date(d),price(pri),quantity(q),stock(s){}    
 
         //获取单个属性
@@ -218,8 +229,8 @@ class Book{
         string PRESS() const{return press;}
         string DATE() const{return date;}
         double PRICE() const{return price;}
-        int QUANTITY() const{return quantity;}
-        int STOCK() const{return stock;}
+        unsigned int QUANTITY() const{return quantity;}
+        unsigned int STOCK() const{return stock;}
 
         //展示信息
         void showinfo(){
@@ -249,7 +260,7 @@ class Book{
 
         //借出，返回借出后剩余数量，如果不够则返回-1表示错误
         int borrow(int i){
-            if(stock-i>=0){
+            if(stock>=i){
                 stock-=i;
                 return stock-i;
             }else{
@@ -294,7 +305,7 @@ class Book{
     private:
         string title,author,isbn,press,date;//字符串类型：书名、编号、作者、出版社、出版日期
         double price;//浮点类型：价格
-        int quantity,stock;//整型：数量、库存
+        unsigned int quantity,stock;//整型：数量、库存
 };
 
 //初始化图书数据
@@ -311,7 +322,7 @@ void Booklist_init(vector<Book>& book_list,string csv){
         string item[8];//9项数据使用数组存储    
         int i=0;
         while(getline(ss,item[i],',')){i++;}
-        book_list.emplace_back(item[0],item[1],item[2],item[3],item[4],stod(item[5]),stoi(item[6]),stoi(item[7]));
+        book_list.emplace_back(item[0],item[1],item[2],item[3],item[4],stod(item[5]),stoul(item[6]),stoul(item[7]));
     }
     log("成功初始化图书数据");
     file.close();
@@ -682,6 +693,7 @@ enum MenuState{
 //主菜单
 MenuState main_menu(){
     log("进入主菜单");
+    title("图书馆管理系统");
     cls();
     //menu_level=0;
     o(R"(主菜单
@@ -727,6 +739,7 @@ MenuState main_menu(){
 //借书菜单
 MenuState borrow_menu(vector<Book>& book_list,vector<User>& user_list){
     log("进入借书菜单");
+    title("借书");
     cls();
     string username;
     if(!login(user_list,username)){
@@ -801,6 +814,7 @@ MenuState borrow_menu(vector<Book>& book_list,vector<User>& user_list){
 //还书菜单
 MenuState return_menu(vector<Book>& book_list,vector<User>& user_list){
     log("进入还书菜单");
+    title("还书");
     cls();
     //Book->是否被借,User->是否唯一
     o("还书");
@@ -864,6 +878,7 @@ MenuState return_menu(vector<Book>& book_list,vector<User>& user_list){
 //查书菜单
 MenuState search_menu(){
     log("进入查书菜单");
+    title("查书");
     cls();
 
     o(R"(查书
@@ -1019,6 +1034,7 @@ MenuState search_book_by_isbn(vector<Book>& book_list){
 //图书管理菜单
 MenuState manage_book_menu(){
     log("进入图书管理菜单");
+    title("图书管理");
     cls();
     o(R"(图书管理
     1.查询所有图书信息
@@ -1065,7 +1081,7 @@ MenuState add_book(vector<Book>& book_list){
     log("添加新的图书");
     string new_title,new_author,new_isbn,new_press,new_date;
     double new_price;
-    int new_quantity,new_stock;
+    unsigned int new_quantity,new_stock;
 
     o("添加新的图书");
     oi(new_title,"书名");
@@ -1118,6 +1134,7 @@ MenuState edit_book(vector<Book>& book_list){
 //用户管理菜单
 MenuState manage_user_menu(){
     log("进入用户管理菜单");
+    title("用户管理");
     return MAIN;
 }
 
@@ -1144,12 +1161,14 @@ MenuState edit_user(vector<User>& user_list){
 //图书报损菜单
 MenuState report_book_menu(){
     log("进入图书报损菜单");
+    title("图书报损");
     return MAIN;
 }
 
 
 int main(){
     log("-----程序启动-----");
+    title("程序初始化");
 
     vector<Book> BookList;
     Booklist_init(BookList,BOOKCSV);
