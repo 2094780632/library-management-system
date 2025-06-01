@@ -14,7 +14,7 @@ using namespace std;
 #define LOG "log.txt"//存放日志的文件
 #define BOOKCSV "test.csv"//存放图书数据的文件
 #define USERCSV "user.csv"//存放用户数据的文件  
-#define TAB 15//TAB制表符长度
+#define TAB 20//TAB制表符长度
 #define BRIEFTAB 30//简要信息制表符长度
 
 //log预声明
@@ -402,7 +402,7 @@ Book& Booklist_isbn(vector<Book>& book_list,string isbn){
             return book;
         }
     }
-    throw "ISBN图书对象访问失败";
+    throw runtime_error("ISBN图书对象访问失败");
     return book_list[0];
 }
 
@@ -412,6 +412,11 @@ bool book_exist(vector<Book>& book_list,string isbn){
         if(book.ISBN()==isbn){return true;}
     }
     return false;
+}
+
+//删除指定ISBN图书
+void Booklist_delbook(vector<Book>& book_list,string isbn){
+    book_list.erase(remove_if(book_list.begin(),book_list.end(),[&isbn](const Book& book) {return book.ISBN()==isbn;}),book_list.end());
 }
 
 //按照指定方式返回符合条件的书本对象
@@ -498,7 +503,7 @@ class User{
 
         //还书
         void returnBook(string ISBN){
-            borrowed_list.erase(remove(borrowed_list.begin(),borrowed_list.end(),ISBN));
+            borrowed_list.erase(remove(borrowed_list.begin(),borrowed_list.end(),ISBN),borrowed_list.end());
         }
         
         //检查ISBN是否已存在
@@ -1081,13 +1086,16 @@ MenuState add_book(vector<Book>& book_list){
     log("添加新的图书");
     string new_title,new_author,new_isbn,new_press,new_date;
     double new_price;
-    unsigned int new_quantity,new_stock;
+    int new_quantity,new_stock;
 
     o("添加新的图书");
     oi(new_title,"书名");
     oi(new_author,"作者");
 
     oi(new_isbn,"ISBN");
+    while(new_isbn=="0"){
+        oi(new_isbn,"ISBN不能是0！请重新输入");
+    }
     while(book_exist(book_list,new_isbn)){
         oi(new_isbn,"该ISBN已存在！请重新输入");
     }
@@ -1096,10 +1104,19 @@ MenuState add_book(vector<Book>& book_list){
     oi(new_date,"出版日期");
 
     oi(new_price,"单价");
+    while(!(new_price>0)){
+        oi(new_price,"单价必须大于0！请重新输入");
+    }
+
+
     oi(new_quantity,"总数");
+    while(!(new_quantity>0)){
+        oi(new_quantity,"总数必须大于0！请重新输入");
+    }
+
     oi(new_stock,"库存");
-    while(new_stock>new_quantity){
-        oi(new_stock,"库存必须小于等于总数！请重新输入");
+    while(new_stock>new_quantity||new_stock<0){
+        oi(new_stock,"库存输入错误！请重新输入");
     }
     
     
@@ -1111,18 +1128,56 @@ MenuState add_book(vector<Book>& book_list){
         book_list.push_back(new_book);
         Booklist_save(book_list,BOOKCSV);
         log("确认添加新的图书信息");
+
+        o("添加成功！");
+        pause();
         return MANAGE_BOOK;
     }else{
         log("取消添加新的图书信息");
         return MANAGE_BOOK;
     }
 
-    pause();
+    //pause();
     return MANAGE_BOOK;
 }
 
 MenuState del_book(vector<Book>& book_list){
     log("删除已有图书");
+    string del_isbn;
+    Book target;
+    bool retry=true;
+
+    while(retry&&del_isbn!="0"){
+        cls();
+        oi(del_isbn,"请输入要删除书籍的ISBN(输入0返回上一级)");
+        if(del_isbn=="0"){return MANAGE_BOOK;}
+        try{
+            target=Booklist_isbn(book_list,del_isbn);
+            log("按ISBN寻书成功");
+            retry=false;
+        }
+        catch(const exception& e){
+            log("按ISBN寻书失败");
+            cerr<<e.what()<<'\n';
+            pause();
+        }
+    }
+
+    Booklist_infoheading();
+    target.showinfo();
+    if(c("请确认要删除的图书信息")){
+        Booklist_delbook(book_list,del_isbn);
+        Booklist_save(book_list,BOOKCSV);
+        log("确认删除图书信息，ISBN："+del_isbn);
+        o("删除成功！");
+        pause();
+        return MANAGE_BOOK;
+    }else{
+        log("取消删除图书信息");
+        return MANAGE_BOOK;
+    }
+
+
     return MANAGE_BOOK;
 }
 
@@ -1175,6 +1230,9 @@ int main(){
 
     vector<User> UserList;
     Userlist_init(UserList,USERCSV);
+
+    cout<<"BookList CSV:"<<BOOKCSV<<endl;
+    cout<<"UserList CSV:"<<USERCSV<<endl;
 
     pause();
 
@@ -1261,6 +1319,9 @@ int main(){
                 break;
         }
     }
+
+    Booklist_save(BookList,BOOKCSV);
+    Userlist_save(UserList,USERCSV);
 
     log("程序默认结束");
 }
