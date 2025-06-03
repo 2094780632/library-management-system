@@ -11,35 +11,15 @@
 #include<string>
 using namespace std;
 
-/*
 #define LOG "log.txt"//存放日志的文件
 #define BOOKCSV "test.csv"//存放图书数据的文件
 #define USERCSV "user.csv"//存放用户数据的文件  
 #define TAB 20//TAB制表符长度
 #define BRIEFTAB 30//简要信息制表符长度
 #define PRICE_MAX 10000//最大单价
-*/
 
-
-///全局数据与设置
-//预先声明
-class Book;
-class User;
+//log预声明
 int log(const string &text);
-
-typedef struct GlobalSettings{
-    string LOG;//存放日志的文件
-    string BOOKCSV;//存放图书数据的文件
-    string USERCSV;//存放用户数据的文件  
-    int TAB = 20;//TAB制表符长度
-    int BRIEFTAB = 30;//简要信息制表符长度
-    double PRICE_MAX = 10000;//最大单价
-}Config;
-
-typedef struct ListData{
-    vector<Book> BookList;//书籍列表
-    vector<User> UserList;//用户列表
-}Data;
 
 
 ///常用通用函数：
@@ -63,7 +43,7 @@ inline void o(const string &text,int t){cout<<setw(t)<<text;}
 inline void o(const double &d,int a,int t){cout<<fixed<<setprecision(a)<<setw(t)<<d;}
 //整型映射到普通输出
 inline void o(const int a){o(to_string(a));}
-inline void o(const int a,int t){o(to_string(a),t);}
+inline void o(const int a,int t){o(to_string(a),TAB);}
 //输出并暂停
 inline void op(const string &text){o(text);pause();}
 
@@ -215,7 +195,6 @@ int f_write(const string& file_name,const string& text,const string& mode){
 
 //日志记录
 int log(const string &text){
-    string LOG="log.txt";
     //获取时间
     auto now=chrono::system_clock::now();
     time_t now_c=chrono::system_clock::to_time_t(now);
@@ -286,7 +265,7 @@ class Book{
         }
 
         //展示信息
-        void showinfo(int &TAB){
+        void showinfo(){
             o(title,TAB);
             o(author,TAB);
             o(isbn,TAB);
@@ -300,7 +279,7 @@ class Book{
         }
 
         //简要信息展示
-        void briefinfo(int &BRIEFTAB){
+        void briefinfo(){
             o(title,BRIEFTAB);
             //o(author,TAB);
             o(to_string(stock),BRIEFTAB);
@@ -393,29 +372,29 @@ void Booklist_save(vector<Book>& book_list,string csv){
 }
 
 //读取图书内容
-void Booklist_info(vector<Book>& book_list,bool isid,int &TAB){
+void Booklist_info(vector<Book>& book_list,bool isid=false){
     log("尝试读取图书数据");
     int i=1;
     for(auto& book:book_list){
         if(isid){o(i,TAB);}
-        book.showinfo(TAB);
+        book.showinfo();
         i++;
     }
 }
 
 //读取简要内容
-void Booklist_briefinfo(vector<Book>& book_list,int &BRIEFTAB){
+void Booklist_briefinfo(vector<Book>& book_list){
     log("尝试读取图书数据");
     int i=1;
     for(auto& book:book_list){
         o(i,BRIEFTAB);
-        book.briefinfo(BRIEFTAB);
+        book.briefinfo();
         i++;
     }
 }
 
 //输出一行图书的表头
-void Booklist_infoheading(int &TAB,bool isid=false){
+void Booklist_infoheading(bool isid=false){
     if(isid){o("序号",TAB);}
     o("书名",TAB);
     o("作者",TAB);
@@ -429,7 +408,7 @@ void Booklist_infoheading(int &TAB,bool isid=false){
 }
 
 //输出一行简要的表头
-void Booklist_briefheading(bool isid,int &BRIEFTAB){
+void Booklist_briefheading(bool isid=false){
     if(isid){o("序号",BRIEFTAB);}
     o("书名",BRIEFTAB);
     //o("作者",TAB);
@@ -541,7 +520,7 @@ class User{
         vector<string> BORROWED_LIST() const{return borrowed_list;}
 
         //信息展示
-        void showinfo(int &TAB){
+        void showinfo(){
             o(name,TAB);
             o(id,TAB);
             o(status,TAB);
@@ -620,12 +599,12 @@ void Userlist_init(vector<User>& user_list,string csv){
 }
 
 //读取用户数据
-void Userlist_info(vector<User>& user_list,int &TAB){
+void Userlist_info(vector<User>& user_list){
     log("尝试读取用户数据");
     int i=1;
     for(auto& user:user_list){
         o(i,TAB);
-        user.showinfo(TAB);
+        user.showinfo();
         i++;
     }
 }
@@ -795,13 +774,7 @@ MenuState main_menu(){
 }
 
 //借书菜单
-MenuState borrow_menu(struct ListData Dat,struct GlobalSettings Cfg){
-    vector<Book> &book_list=Dat.BookList;
-    vector<User> &user_list=Dat.UserList;
-    int &BRIEFTAB=Cfg.BRIEFTAB;
-    string &BOOKCSV=Cfg.BOOKCSV;
-    string &USERCSV=Cfg.USERCSV;
-
+MenuState borrow_menu(vector<Book>& book_list,vector<User>& user_list){
     log("进入借书菜单");
     title("借书");
     cls();
@@ -817,7 +790,7 @@ MenuState borrow_menu(struct ListData Dat,struct GlobalSettings Cfg){
     }
 
     cls();
-    Booklist_briefheading(true,BRIEFTAB);
+    Booklist_briefheading(true);
 
     int freenum=0;
     
@@ -829,7 +802,7 @@ MenuState borrow_menu(struct ListData Dat,struct GlobalSettings Cfg){
         if(book_list[i].isfree()){
             //序号
             o(to_string(freenum+1),BRIEFTAB);
-            book_list[i].briefinfo(BRIEFTAB);
+            book_list[i].briefinfo();
             free_index.push_back(i);
             freenum++;
         }
@@ -876,12 +849,7 @@ MenuState borrow_menu(struct ListData Dat,struct GlobalSettings Cfg){
 }
 
 //还书菜单
-MenuState return_menu(struct ListData Dat,struct GlobalSettings Cfg){
-    vector<Book> &book_list=Dat.BookList;
-    vector<User> &user_list=Dat.UserList;
-    string &BOOKCSV=Cfg.BOOKCSV;
-    string &USERCSV=Cfg.USERCSV;
-
+MenuState return_menu(vector<Book>& book_list,vector<User>& user_list){
     log("进入还书菜单");
     title("还书");
     cls();
@@ -983,10 +951,7 @@ MenuState search_menu(){
     return MAIN;
 }
 
-MenuState search_book_by_title(struct ListData Dat,struct GlobalSettings Cfg){
-    vector<Book> &book_list=Dat.BookList;
-    int &TAB=Cfg.TAB;
-    
+MenuState search_book_by_title(vector<Book>& book_list){
     log("按书名查书");
     string searchbookname;
     vector<Book> target;
@@ -1008,18 +973,15 @@ MenuState search_book_by_title(struct ListData Dat,struct GlobalSettings Cfg){
             pause();
         }
     }
-    Booklist_infoheading(TAB);
+    Booklist_infoheading();
     for(auto& book:target){
-        book.showinfo(TAB);
+        book.showinfo();
     }
     pause();
     return SEARCH_BOOK;
 }
 
-MenuState search_book_by_author(struct ListData Dat,struct GlobalSettings Cfg){
-    vector<Book> &book_list=Dat.BookList;
-    int &TAB=Cfg.TAB;
-
+MenuState search_book_by_author(vector<Book>& book_list){
     log("按作者查书");
     string searchbookauthor;
     vector<Book> target;
@@ -1041,19 +1003,15 @@ MenuState search_book_by_author(struct ListData Dat,struct GlobalSettings Cfg){
             pause();
         }
     }
-    Booklist_infoheading(TAB);
+    Booklist_infoheading();
     for(auto& book:target){
-        book.showinfo(TAB);
+        book.showinfo();
     }
     pause();
     return SEARCH_BOOK;
 }
 
-MenuState search_book_by_user(struct ListData Dat,struct GlobalSettings Cfg){
-    vector<Book> &book_list=Dat.BookList;
-    vector<User> &user_list=Dat.UserList;
-    int &TAB=Cfg.TAB;
-
+MenuState search_book_by_user(vector<Book>& book_list,vector<User>& user_list){
     log("按借阅人查书");
     cls();
     string searchbookuser;
@@ -1070,9 +1028,9 @@ MenuState search_book_by_user(struct ListData Dat,struct GlobalSettings Cfg){
     if(vetostr(target_string)=="[]"){
         o("无借阅！");
     }else{
-        Booklist_infoheading(TAB);
+        Booklist_infoheading();
         for(auto& isbn:target_string){
-            Booklist_isbn(book_list,isbn).showinfo(TAB);
+            Booklist_isbn(book_list,isbn).showinfo();
         }
     }
 
@@ -1080,10 +1038,7 @@ MenuState search_book_by_user(struct ListData Dat,struct GlobalSettings Cfg){
     return SEARCH_BOOK;
 }
 
-MenuState search_book_by_isbn(struct ListData Dat,struct GlobalSettings Cfg){
-    vector<Book> &book_list=Dat.BookList;
-    int &TAB=Cfg.TAB;
-
+MenuState search_book_by_isbn(vector<Book>& book_list){
     log("按ISBN查书");
     string searchbookisbn;
     vector<Book> target;
@@ -1105,9 +1060,9 @@ MenuState search_book_by_isbn(struct ListData Dat,struct GlobalSettings Cfg){
             pause();
         }
     }
-    Booklist_infoheading(TAB);
+    Booklist_infoheading();
     for(auto& book:target){
-        book.showinfo(TAB);
+        book.showinfo();
     }
     pause();
     return SEARCH_BOOK;
@@ -1151,22 +1106,15 @@ MenuState manage_book_menu(){
     return MAIN;
 }
 
-MenuState query_book(struct ListData Dat,struct GlobalSettings Cfg){
-    vector<Book> &book_list=Dat.BookList;
-    int &TAB=Cfg.TAB;
-
+MenuState query_book(vector<Book>& book_list){
     log("查询所有图书信息");
-    Booklist_infoheading(TAB);
-    Booklist_info(book_list,false,TAB);
+    Booklist_infoheading();
+    Booklist_info(book_list);
     pause();
     return MANAGE_BOOK;
 }
 
-MenuState add_book(struct ListData Dat,struct GlobalSettings Cfg){
-    vector<Book> &book_list=Dat.BookList;
-    string &BOOKCSV=Cfg.BOOKCSV;
-    int &TAB=Cfg.TAB;
-
+MenuState add_book(vector<Book>& book_list){
     log("添加新的图书");
     string new_title,new_author,new_isbn,new_press,new_date;
     double new_price;
@@ -1206,8 +1154,8 @@ MenuState add_book(struct ListData Dat,struct GlobalSettings Cfg){
     
     Book new_book(new_title,new_author,new_isbn,new_press,new_date,new_price,new_quantity,new_stock);
     
-    Booklist_infoheading(TAB);
-    new_book.showinfo(TAB);
+    Booklist_infoheading();
+    new_book.showinfo();
     if(c("请确认新的图书信息")){
         book_list.push_back(new_book);
         Booklist_save(book_list,BOOKCSV);
@@ -1225,11 +1173,7 @@ MenuState add_book(struct ListData Dat,struct GlobalSettings Cfg){
     return MANAGE_BOOK;
 }
 
-MenuState del_book(struct ListData Dat,struct GlobalSettings Cfg){
-    vector<Book> &book_list=Dat.BookList;
-    string &BOOKCSV=Cfg.BOOKCSV;
-    int &TAB=Cfg.TAB;
-    
+MenuState del_book(vector<Book>& book_list){
     log("删除已有图书");
     string del_isbn;
     Book target;
@@ -1251,8 +1195,8 @@ MenuState del_book(struct ListData Dat,struct GlobalSettings Cfg){
         }
     }
 
-    Booklist_infoheading(TAB);
-    target.showinfo(TAB);
+    Booklist_infoheading();
+    target.showinfo();
     if(c("请确认要删除的图书信息")){
         Booklist_delbook(book_list,del_isbn);
         Booklist_save(book_list,BOOKCSV);
@@ -1269,12 +1213,7 @@ MenuState del_book(struct ListData Dat,struct GlobalSettings Cfg){
     return MANAGE_BOOK;
 }
 
-MenuState edit_book(struct ListData Dat,struct GlobalSettings Cfg){
-    vector<Book> &book_list=Dat.BookList;
-    double &PRICE_MAX=Cfg.PRICE_MAX;
-    string &BOOKCSV=Cfg.BOOKCSV;
-    int &TAB=Cfg.TAB;
-
+MenuState edit_book(vector<Book>& book_list){
     log("编辑指定图书");
     string edit_isbn;
     Book *target;
@@ -1296,8 +1235,8 @@ MenuState edit_book(struct ListData Dat,struct GlobalSettings Cfg){
         }
     }
 
-    Booklist_infoheading(TAB);
-    target->showinfo(TAB);
+    Booklist_infoheading();
+    target->showinfo();
     
     int c;
     string input;
@@ -1449,22 +1388,22 @@ MenuState manage_user_menu(){
     return MAIN;
 }
 
-MenuState query_user(struct ListData Dat){
+MenuState query_user(vector<User>& user_list){
     log("查询所有用户信息");
     return MANAGE_USER;
 }
 
-MenuState add_user(struct ListData Dat){
+MenuState add_user(vector<User>& user_list){
     log("添加新的用户信息");
     return MANAGE_USER;
 }
 
-MenuState del_user(struct ListData Dat){
+MenuState del_user(vector<User>& user_list){
     log("删除已有用户信息");
     return MANAGE_USER;
 }
 
-MenuState edit_user(struct ListData Dat){
+MenuState edit_user(vector<User>& user_list){
     log("修改指定用户信息");
     return MANAGE_USER;
 }
@@ -1481,23 +1420,14 @@ int main(){
     log("-----程序启动-----");
     title("程序初始化");
 
-    //默认设置
-    Config Cfg;
-    Cfg.LOG="log.txt";
-    Cfg.BOOKCSV="test.csv";
-    Cfg.USERCSV="user.csv";
-    Cfg.TAB=20;
-    Cfg.BRIEFTAB=30;
-    Cfg.PRICE_MAX=10000;
+    vector<Book> BookList;
+    Booklist_init(BookList,BOOKCSV);
 
-    Data Dat;
+    vector<User> UserList;
+    Userlist_init(UserList,USERCSV);
 
-    Booklist_init(Dat.BookList,Cfg.BOOKCSV);
-
-    Userlist_init(Dat.UserList,Cfg.USERCSV);
-
-    cout<<"BookList CSV:"<<Cfg.BOOKCSV<<endl;
-    cout<<"UserList CSV:"<<Cfg.USERCSV<<endl;
+    cout<<"BookList CSV:"<<BOOKCSV<<endl;
+    cout<<"UserList CSV:"<<USERCSV<<endl;
 
     pause();
 
@@ -1510,29 +1440,29 @@ int main(){
                 menu_state=main_menu();
                 break;
             case BORROW_BOOK:
-                menu_state=borrow_menu(Dat,Cfg);
+                menu_state=borrow_menu(BookList,UserList);
                 break;
             case RETURN_BOOK:
-                menu_state=return_menu(Dat,Cfg);
+                menu_state=return_menu(BookList,UserList);
                 break;
             case SEARCH_BOOK:
                 menu_state=search_menu();
                 break;
 
                 case SEARCH_BOOK_BY_TITLE:
-                    menu_state=search_book_by_title(Dat,Cfg);
+                    menu_state=search_book_by_title(BookList);
                     break;
                 
                 case SEARCH_BOOK_BY_AUTHOR:
-                    menu_state=search_book_by_author(Dat,Cfg);
+                    menu_state=search_book_by_author(BookList);
                     break;
                 
                 case SEARCH_BOOK_BY_USER:
-                    menu_state=search_book_by_user(Dat,Cfg);
+                    menu_state=search_book_by_user(BookList,UserList);
                     break;
                 
                 case SEARCH_BOOK_BY_ISBN:
-                    menu_state=search_book_by_isbn(Dat,Cfg);
+                    menu_state=search_book_by_isbn(BookList);
                     break;
                 
             case MANAGE_BOOK:
@@ -1540,19 +1470,19 @@ int main(){
                 break;
 
                 case QUERY_BOOK:
-                    menu_state=query_book(Dat,Cfg);
+                    menu_state=query_book(BookList);
                     break;
 
                 case ADD_BOOK:
-                    menu_state=add_book(Dat,Cfg);
+                    menu_state=add_book(BookList);
                     break;
                 
                 case DEL_BOOK:
-                    menu_state=del_book(Dat,Cfg);
+                    menu_state=del_book(BookList);
                     break;
                 
                 case EDIT_BOOK:
-                    menu_state=edit_book(Dat,Cfg);
+                    menu_state=edit_book(BookList);
                     break;
             
             case MANAGE_USER:
@@ -1560,19 +1490,19 @@ int main(){
                 break;
                 
                 case QUERY_USER:
-                menu_state=query_user(Dat);
+                menu_state=query_user(UserList);
                 break;
 
                 case ADD_USER:
-                menu_state=add_user(Dat);
+                menu_state=add_user(UserList);
                 break;
 
                 case DEL_USER:
-                menu_state=del_user(Dat);
+                menu_state=del_user(UserList);
                 break;
 
                 case EDIT_USER:
-                menu_state=edit_user(Dat);
+                menu_state=edit_user(UserList);
                 break;
 
             case REPORT_BOOK:
@@ -1585,8 +1515,8 @@ int main(){
         }
     }
 
-    Booklist_save(Dat.BookList,Cfg.BOOKCSV);
-    Userlist_save(Dat.UserList,Cfg.USERCSV);
+    Booklist_save(BookList,BOOKCSV);
+    Userlist_save(UserList,USERCSV);
 
     log("程序默认结束");
 }
