@@ -3,7 +3,8 @@
 #include<sstream>
 #include<fstream>
 #include<iomanip>
-#include <algorithm>
+#include<algorithm>
+#include<windows.h>
 
 #include<chrono>
 #include<ctime>
@@ -19,7 +20,6 @@ using namespace std;
 #define BRIEFTAB 30//简要信息制表符长度
 #define PRICE_MAX 10000//最大单价
 */
-
 
 ///全局数据与设置
 //预先声明
@@ -139,6 +139,78 @@ bool c(string tip){
     if(in=="y"){return true;}else if(in=="n"){return false;}
     log("no return");
     return false;
+}
+
+// 定义颜色常量
+const int BLACK=0;
+const int BLUE=1;
+const int GREEN=2;
+const int CYAN=3;
+const int RED=4;
+const int MAGENTA=5;
+const int YELLOW=6;
+const int WHITE=7;
+// 定义亮色版本
+const int BRIGHT_BLACK=8;
+const int BRIGHT_BLUE=9;
+const int BRIGHT_GREEN=10;
+const int BRIGHT_CYAN=11;
+const int BRIGHT_RED=12;
+const int BRIGHT_MAGENTA=13;
+const int BRIGHT_YELLOW=14;
+const int BRIGHT_WHITE=15;
+//颜色系统
+class ColorGuard {
+    private:
+        HANDLE hConsole;
+        WORD originalAttributes;
+    public:
+        // 构造函数，支持设置文本颜色和背景颜色
+        ColorGuard(int textColor, int bgColor = 0){
+            hConsole=GetStdHandle(STD_OUTPUT_HANDLE);
+            CONSOLE_SCREEN_BUFFER_INFO info;
+            GetConsoleScreenBufferInfo(hConsole,&info);
+            originalAttributes=info.wAttributes;
+
+            // 设置文本颜色和背景颜色
+            WORD color=(bgColor << 4) | textColor; // 背景颜色左移4位，与文本颜色组合
+            SetConsoleTextAttribute(hConsole, color);
+        }
+
+        ~ColorGuard(){
+            SetConsoleTextAttribute(hConsole, originalAttributes);
+        }
+};
+using CG=ColorGuard;
+
+inline void CT(const string &t){
+    CG C(BLACK,WHITE);
+    o(t);
+}
+
+//选项
+int option(vector<string> &options,bool back){
+    int c=-1;
+    int j=1;
+    for(auto& op:options){
+        {
+            CG C(BRIGHT_CYAN);
+            cout<<"  "<<j;
+        }
+        o("."+op);
+        j++;
+    }
+    if(back){
+        {
+            CG C(BRIGHT_CYAN);
+            cout<<"  "<<'0';
+        }
+        o(".返回");
+        i(c,0,options.size());
+    }else{
+        i(c,1,options.size());
+    }
+    return c;
 }
 
 
@@ -397,18 +469,24 @@ void Booklist_info(vector<Book>& book_list,bool isid,int &TAB){
     log("尝试读取图书数据");
     int i=1;
     for(auto& book:book_list){
-        if(isid){o(i,TAB);}
+        if(isid){
+            CG C(BRIGHT_CYAN);
+            o(i,TAB);
+        }
         book.showinfo(TAB);
         i++;
     }
 }
 
 //读取简要内容
-void Booklist_briefinfo(vector<Book>& book_list,int &BRIEFTAB){
+void Booklist_briefinfo(vector<Book>& book_list,bool isid,int &BRIEFTAB){
     log("尝试读取图书数据");
     int i=1;
     for(auto& book:book_list){
-        o(i,BRIEFTAB);
+        if(isid){
+            CG C(BRIGHT_CYAN);
+            o(i,BRIEFTAB);
+        }
         book.briefinfo(BRIEFTAB);
         i++;
     }
@@ -416,6 +494,7 @@ void Booklist_briefinfo(vector<Book>& book_list,int &BRIEFTAB){
 
 //输出一行图书的表头
 void Booklist_infoheading(int &TAB,bool isid=false){
+    CG C(YELLOW);
     if(isid){o("序号",TAB);}
     o("书名",TAB);
     o("作者",TAB);
@@ -430,6 +509,7 @@ void Booklist_infoheading(int &TAB,bool isid=false){
 
 //输出一行简要的表头
 void Booklist_briefheading(bool isid,int &BRIEFTAB){
+    CG C(YELLOW);
     if(isid){o("序号",BRIEFTAB);}
     o("书名",BRIEFTAB);
     //o("作者",TAB);
@@ -685,6 +765,9 @@ bool login(vector<User>& user_list,string &puser){
     log("login:尝试登录");
     string username;
     //o("登录");
+
+    CT("登录");
+
     oi(username,"请输入借阅人的名字");
     if(user_exist(user_list,username)){
         log("login:登录成功");
@@ -754,17 +837,11 @@ MenuState main_menu(){
     title("图书馆管理系统");
     cls();
     //menu_level=0;
-    o(R"(主菜单
-    1.借书
-    2.还书
-    3.查书
-    4.图书管理
-    5.借阅人管理
-    6.图书报损
-    7.退出程序
-    )");
-    int c;//存储用户选择的整型变量
-    i(c,1,7);
+
+    vector<string> ops={"借书","还书","查书","图书管理","借阅人管理","图书报损","退出程序"};
+    CT("主菜单");
+
+    int c=option(ops,false);;//存储用户选择的整型变量
     switch(c){
         case 1:
             return BORROW_BOOK;
@@ -817,6 +894,9 @@ MenuState borrow_menu(struct ListData Dat,struct GlobalSettings Cfg){
     }
 
     cls();
+    CT("借书");
+
+
     Booklist_briefheading(true,BRIEFTAB);
 
     int freenum=0;
@@ -825,15 +905,19 @@ MenuState borrow_menu(struct ListData Dat,struct GlobalSettings Cfg){
 
     //创建可被借阅的书的索引
     vector<int> free_index;
+    vector<Book> templist;
     for(size_t i=0;i<book_list.size();++i){
         if(book_list[i].isfree()){
-            //序号
-            o(to_string(freenum+1),BRIEFTAB);
-            book_list[i].briefinfo(BRIEFTAB);
+            templist.push_back(book_list[i]);
+            //o(to_string(freenum+1),BRIEFTAB);
+            //book_list[i].briefinfo(BRIEFTAB);
             free_index.push_back(i);
             freenum++;
         }
     }
+
+    Booklist_briefinfo(templist,true,BRIEFTAB);
+
 
     if(freenum==0){
         o("没有可以借阅的书籍");
@@ -886,7 +970,7 @@ MenuState return_menu(struct ListData Dat,struct GlobalSettings Cfg){
     title("还书");
     cls();
     //Book->是否被借,User->是否唯一
-    o("还书");
+    CT("还书");
     string returnbookisbn;
     oi(returnbookisbn,"请输入要归还的书籍的ISBN");
 
@@ -950,15 +1034,10 @@ MenuState search_menu(){
     title("查书");
     cls();
 
-    o(R"(查书
-    1.按书名查找
-    2.按作者查找
-    3.按借阅人查找
-    4.按ISBN查找
-    0.返回主菜单
-    )");
-    int c;
-    i(c,0,4);
+    vector<string> ops={"按书名查找","按作者查找","按借阅人查找","按ISBN查找"};
+    CT("查书");
+
+    int c=option(ops,true);
     switch(c)
     {
     case 1:
@@ -995,6 +1074,7 @@ MenuState search_book_by_title(struct ListData Dat,struct GlobalSettings Cfg){
 
     while(retry&&searchbookname!="0"){
         cls();
+        CT("查书\\按书名查找");
         oi(searchbookname,"请输入要查询的书籍名称(输入0返回上一级)");
         if(searchbookname=="0"){return SEARCH_BOOK;}
         try{
@@ -1028,6 +1108,7 @@ MenuState search_book_by_author(struct ListData Dat,struct GlobalSettings Cfg){
 
     while(retry&&searchbookauthor!="0"){
         cls();
+        CT("查书\\按作者查找");
         oi(searchbookauthor,"请输入要查询书籍的作者名称(输入0返回上一级)");
         if(searchbookauthor=="0"){return SEARCH_BOOK;}
         try{
@@ -1067,6 +1148,8 @@ MenuState search_book_by_user(struct ListData Dat,struct GlobalSettings Cfg){
     }
 
     target_string=Userlist_element(user_list,username).BORROWED_LIST();
+    cls();
+    CT("查书\\按借阅人查找");
     if(vetostr(target_string)=="[]"){
         o("无借阅！");
     }else{
@@ -1092,6 +1175,7 @@ MenuState search_book_by_isbn(struct ListData Dat,struct GlobalSettings Cfg){
 
     while(retry&&searchbookisbn!="0"){
         cls();
+        CT("查书\\按ISBN查找");
         oi(searchbookisbn,"请输入要查询书籍的ISBN(输入0返回上一级)");
         if(searchbookisbn=="0"){return SEARCH_BOOK;}
         try{
@@ -1118,15 +1202,10 @@ MenuState manage_book_menu(){
     log("进入图书管理菜单");
     title("图书管理");
     cls();
-    o(R"(图书管理
-    1.查询所有图书信息
-    2.添加新的图书信息
-    3.删除已有图书信息
-    4.编辑指定图书信息
-    0.返回主菜单
-    )");
-    int c;
-    i(c,0,4);
+
+    vector<string> ops={"查询所有图书信息","添加新的图书信息","删除已有图书信息","编辑指定图书信息"};
+    CT("图书管理");
+    int c=option(ops,true);
     switch(c)
     {
     case 1:
@@ -1156,6 +1235,7 @@ MenuState query_book(struct ListData Dat,struct GlobalSettings Cfg){
     int &TAB=Cfg.TAB;
 
     log("查询所有图书信息");
+    CT("图书管理\\查询所有图书信息");
     Booklist_infoheading(TAB);
     Booklist_info(book_list,false,TAB);
     pause();
@@ -1172,7 +1252,7 @@ MenuState add_book(struct ListData Dat,struct GlobalSettings Cfg){
     double new_price;
     int new_quantity,new_stock;
 
-    o("添加新的图书");
+    CT("图书管理\\添加新的图书");
     oi(new_title,"书名");
     oi(new_author,"作者");
 
@@ -1237,6 +1317,7 @@ MenuState del_book(struct ListData Dat,struct GlobalSettings Cfg){
 
     while(retry&&del_isbn!="0"){
         cls();
+        CT("图书管理\\删除已有图书信息");
         oi(del_isbn,"请输入要删除书籍的ISBN(输入0返回上一级)");
         if(del_isbn=="0"){return MANAGE_BOOK;}
         try{
@@ -1282,6 +1363,7 @@ MenuState edit_book(struct ListData Dat,struct GlobalSettings Cfg){
 
     while(retry&&edit_isbn!="0"){
         cls();
+        CT("图书管理\\编辑指定图书信息");
         oi(edit_isbn,"请输入要编辑书籍的ISBN(输入0返回上一级)");
         if(edit_isbn=="0"){return MANAGE_BOOK;}
         try{
