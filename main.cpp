@@ -613,6 +613,7 @@ string vetostr(vector<string> list){
 class User{
     public:
         //构造函数（无任何借阅书籍）
+        User(){}
         User(string n,string i,string s="N",vector<string> l={}):name(n),id(i),status(s),borrowed_list(l){};
 
         //获取单个属性
@@ -623,11 +624,18 @@ class User{
 
         //信息展示
         void showinfo(int &TAB){
-            o(name,TAB);
-            o(id,TAB);
-            o(status,TAB);
-            o(vetostr(borrowed_list),TAB);
-            o("");
+            if(status!="R"){
+                o(name,TAB);
+                o(id,TAB);
+                string strstatus;
+                if(status=="A"){strstatus="管理员用户";}
+                if(status=="N"){strstatus="普通用户";}
+                if(status=="B"){strstatus="黑名单用户";}
+                o(strstatus,TAB);
+                //o(vetostr(borrowed_list),TAB);
+                o(borrowed_list.size(),TAB);
+                o("");
+            }
         }
 
         //借书
@@ -703,12 +711,21 @@ void Userlist_init(vector<User>& user_list,string csv){
 //读取用户数据
 void Userlist_info(vector<User>& user_list,int &TAB){
     log("尝试读取用户数据");
-    int i=1;
+    //int i=1;
     for(auto& user:user_list){
-        o(i,TAB);
+        //o(i,TAB);
         user.showinfo(TAB);
-        i++;
+        //i++;
     }
+}
+
+void Userlist_infoheading(int &TAB){
+    CG C(YELLOW);
+    o("用户名",TAB);
+    o("ID",TAB);
+    o("状态",TAB);
+    o("借阅总数",TAB);
+    o("");
 }
 
 //保存用户数据
@@ -1515,30 +1532,106 @@ MenuState edit_book(struct ListData &Dat,struct GlobalSettings &Cfg){
 }
 
 //用户管理菜单
-MenuState manage_user_menu(){
+MenuState manage_user_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
+    vector<User> &user_list=Dat.UserList;
+    int &TAB=Cfg.TAB;
+
     log("进入用户管理菜单");
     title("用户管理");
+    cls();
+
+    User user;
+    string username;
+
+    vector<string> ops;
+    
+    if(!login(user_list,username)){
+        return MAIN;
+    }else{
+        user=Userlist_element(user_list,username);
+    }
+
+    //黑名单用户
+    if(user.STATUS()=="B"){
+        op("该用户已被列入黑名单！");
+        return MAIN;
+    }else if(user.STATUS()=="N"){
+        cls();
+        CT("借阅人管理："+username);
+        ops={"查询当前借阅人信息"};
+        int c=option(ops,true);
+        switch(c){
+        case 1:
+            cls();
+            Userlist_infoheading(TAB);
+            user.showinfo(TAB);
+            pause();
+            break;
+        case 0:
+            return MAIN;
+            break;
+        default:
+            return MAIN;
+            break;
+        }
+    }else if(user.STATUS()=="A"){
+        cls();
+        CT("借阅人管理："+username);
+        ops={"查询所有借阅人信息","添加新的借阅人信息","删除已有借阅人信息","修改已有借阅人信息"};
+        int c=option(ops,true);
+        switch(c){
+        case 1:
+            return QUERY_USER;
+            break;
+        case 2:
+            return ADD_USER;
+            break;
+        case 3:
+            return DEL_USER;
+            break;
+        case 4:
+            return EDIT_USER;
+            break;
+        default:
+            return MAIN;
+            break;
+        }
+    }else{
+        op("未知错误");
+        return MAIN;
+    }
+
     return MAIN;
 }
 
-MenuState query_user(struct ListData &Dat){
+MenuState query_user(struct ListData &Dat,struct GlobalSettings &Cfg){
+    vector<User> &user_list=Dat.UserList;
+    int &TAB=Cfg.TAB;
+
     log("查询所有用户信息");
-    return MANAGE_USER;
+    cls();
+    CT("借阅人管理\\查询所有借阅人");
+
+    Userlist_infoheading(TAB);
+    Userlist_info(user_list,TAB);
+
+    pause();
+    return MAIN;
 }
 
 MenuState add_user(struct ListData &Dat){
     log("添加新的用户信息");
-    return MANAGE_USER;
+    return MAIN;
 }
 
 MenuState del_user(struct ListData &Dat){
     log("删除已有用户信息");
-    return MANAGE_USER;
+    return MAIN;
 }
 
 MenuState edit_user(struct ListData &Dat){
     log("修改指定用户信息");
-    return MANAGE_USER;
+    return MAIN;
 }
 
 //图书报损菜单
@@ -1628,11 +1721,11 @@ int main(){
                     break;
             
             case MANAGE_USER:
-                menu_state=manage_user_menu();
+                menu_state=manage_user_menu(Dat,Cfg);
                 break;
                 
                 case QUERY_USER:
-                menu_state=query_user(Dat);
+                menu_state=query_user(Dat,Cfg);
                 break;
 
                 case ADD_USER:
