@@ -530,14 +530,13 @@ Book& Booklist_element(vector<Book>& book_list,int index){
 //线性查找ISBN图书对象
 Book& Booklist_isbn(vector<Book>& book_list,string isbn){
     log("调用指定ISBN书籍对象");
-    auto it=find_if(book_list.begin(),book_list.end(),[&isbn](const Book& book){
-        return book.ISBN()==isbn;
-    });
-    if (it == book_list.end()) {
-        log("ISBN图书对象访问失败");
-        throw runtime_error("无法找到对应书籍！");
+    for(auto& book:book_list){
+        if(book.ISBN()==isbn){
+            return book;
+        }
     }
-    return *it;
+    throw runtime_error("ISBN图书对象访问失败");
+    return book_list[0];
 }
 
 //查询书本是否存在(ISBN)
@@ -873,7 +872,7 @@ MenuState main_menu(){
 }
 
 //借书菜单
-MenuState borrow_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
+MenuState borrow_menu(struct ListData Dat,struct GlobalSettings Cfg){
     vector<Book> &book_list=Dat.BookList;
     vector<User> &user_list=Dat.UserList;
     int &BRIEFTAB=Cfg.BRIEFTAB;
@@ -961,7 +960,7 @@ MenuState borrow_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
 }
 
 //还书菜单
-MenuState return_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
+MenuState return_menu(struct ListData Dat,struct GlobalSettings Cfg){
     vector<Book> &book_list=Dat.BookList;
     vector<User> &user_list=Dat.UserList;
     string &BOOKCSV=Cfg.BOOKCSV;
@@ -1063,7 +1062,7 @@ MenuState search_menu(){
     return MAIN;
 }
 
-MenuState search_book_by_title(struct ListData &Dat,struct GlobalSettings &Cfg){
+MenuState search_book_by_title(struct ListData Dat,struct GlobalSettings Cfg){
     vector<Book> &book_list=Dat.BookList;
     int &TAB=Cfg.TAB;
     
@@ -1097,7 +1096,7 @@ MenuState search_book_by_title(struct ListData &Dat,struct GlobalSettings &Cfg){
     return SEARCH_BOOK;
 }
 
-MenuState search_book_by_author(struct ListData &Dat,struct GlobalSettings &Cfg){
+MenuState search_book_by_author(struct ListData Dat,struct GlobalSettings Cfg){
     vector<Book> &book_list=Dat.BookList;
     int &TAB=Cfg.TAB;
 
@@ -1131,7 +1130,7 @@ MenuState search_book_by_author(struct ListData &Dat,struct GlobalSettings &Cfg)
     return SEARCH_BOOK;
 }
 
-MenuState search_book_by_user(struct ListData &Dat,struct GlobalSettings &Cfg){
+MenuState search_book_by_user(struct ListData Dat,struct GlobalSettings Cfg){
     vector<Book> &book_list=Dat.BookList;
     vector<User> &user_list=Dat.UserList;
     int &TAB=Cfg.TAB;
@@ -1164,7 +1163,7 @@ MenuState search_book_by_user(struct ListData &Dat,struct GlobalSettings &Cfg){
     return SEARCH_BOOK;
 }
 
-MenuState search_book_by_isbn(struct ListData &Dat,struct GlobalSettings &Cfg){
+MenuState search_book_by_isbn(struct ListData Dat,struct GlobalSettings Cfg){
     vector<Book> &book_list=Dat.BookList;
     int &TAB=Cfg.TAB;
 
@@ -1231,7 +1230,7 @@ MenuState manage_book_menu(){
     return MAIN;
 }
 
-MenuState query_book(struct ListData &Dat,struct GlobalSettings &Cfg){
+MenuState query_book(struct ListData Dat,struct GlobalSettings Cfg){
     vector<Book> &book_list=Dat.BookList;
     int &TAB=Cfg.TAB;
 
@@ -1243,7 +1242,7 @@ MenuState query_book(struct ListData &Dat,struct GlobalSettings &Cfg){
     return MANAGE_BOOK;
 }
 
-MenuState add_book(struct ListData &Dat,struct GlobalSettings &Cfg){
+MenuState add_book(struct ListData Dat,struct GlobalSettings Cfg){
     vector<Book> &book_list=Dat.BookList;
     string &BOOKCSV=Cfg.BOOKCSV;
     int &TAB=Cfg.TAB;
@@ -1306,7 +1305,7 @@ MenuState add_book(struct ListData &Dat,struct GlobalSettings &Cfg){
     return MANAGE_BOOK;
 }
 
-MenuState del_book(struct ListData &Dat,struct GlobalSettings &Cfg){
+MenuState del_book(struct ListData Dat,struct GlobalSettings Cfg){
     vector<Book> &book_list=Dat.BookList;
     string &BOOKCSV=Cfg.BOOKCSV;
     int &TAB=Cfg.TAB;
@@ -1351,13 +1350,15 @@ MenuState del_book(struct ListData &Dat,struct GlobalSettings &Cfg){
     return MANAGE_BOOK;
 }
 
-MenuState edit_book(struct ListData &Dat,struct GlobalSettings &Cfg){
-    vector<Book>& book_list=Dat.BookList;
+MenuState edit_book(struct ListData Dat,struct GlobalSettings Cfg){
+    vector<Book> &book_list=Dat.BookList;
     double &PRICE_MAX=Cfg.PRICE_MAX;
     string &BOOKCSV=Cfg.BOOKCSV;
     int &TAB=Cfg.TAB;
+
     log("编辑指定图书");
     string edit_isbn;
+    Book *target;
     bool retry=true;
 
     while(retry&&edit_isbn!="0"){
@@ -1366,143 +1367,9 @@ MenuState edit_book(struct ListData &Dat,struct GlobalSettings &Cfg){
         oi(edit_isbn,"请输入要编辑书籍的ISBN(输入0返回上一级)");
         if(edit_isbn=="0"){return MANAGE_BOOK;}
         try{
-            Book& target=Booklist_isbn(book_list,edit_isbn);
+            target=&Booklist_isbn(book_list,edit_isbn);
             log("按ISBN寻书成功");
-            Booklist_infoheading(TAB);
-            target.showinfo(TAB);
             retry=false;
-            o("请输入需要更改的项目"); 
-            vector<string> ops={"书名","作者","ISBN","出版社","出版日期","单价","总数","库存"};
-            int c=option(ops,false);
-
-            if(c==0){return MANAGE_BOOK;}
-
-            string input;
-            oi(input,"请输入修改后的内容");
-
-            switch(c){
-            case 1:
-                target.change_title(input);
-                log("修改书名："+input);
-                break;
-            case 2:
-                target.change_author(input);
-                log("修改作者："+input);
-                break;
-            case 3:
-                while(input=="0"){
-                    oi(input,"ISBN不能是0！请重新输入");
-                }
-                while(book_exist(book_list,input)){
-                    oi(input,"该ISBN已存在！请重新输入");
-                }
-                target.change_isbn(input);
-                log("修改ISBN："+input);
-                break;
-            case 4:
-                target.change_press(input);
-                log("修改出版社："+input);
-                break;
-            case 5:
-                target.change_date(input);
-                log("修改出版日期："+input);
-                break;
-            case 6:
-                retry=true;
-                while(retry){
-                    try{
-                        double cast_double=stod(input);
-                        if(cast_double>0&&cast_double<=PRICE_MAX){
-                            target.change_price(cast_double);
-                            log("修改单价："+input);
-                            retry=false;
-                        }else if(cast_double<0){
-                            cerr<<"单价必须大于0！"<<endl;
-                            oi(input,"请重新输入"); 
-                        }else if(cast_double>PRICE_MAX){
-                            cerr<<"单价太大了！"<<endl;
-                            oi(input,"请重新输入");
-                        }else{
-                            cerr<<"单价无效！"<<endl;
-                            oi(input,"请重新输入");
-                        }
-                    }
-                    catch(const invalid_argument& e){
-                        cerr<<"输入的单价无效，请输入一个有效的数字！"<<endl;
-                        oi(input,"请重新输入");
-                    }
-                    catch(const out_of_range& e){
-                        cerr<<"输入的单价超出了范围！"<<endl;
-                        oi(input,"请重新输入");
-                    }
-                    catch(const std::exception& e){
-                        cerr << e.what() << '\n';
-                        oi(input,"请重新输入");
-                    }
-                }
-                break;
-            case 7:
-                retry=true;
-                while(retry){
-                    try{
-                        int cast_int=stoi(input);
-                        if(cast_int>0&&cast_int>=target.STOCK()){
-                            target.change_quantity(cast_int);
-                            log("修改总数："+input);
-                            retry=false;
-                        }else{
-                            cerr<<"总数必须大于0且大于等于当前库存！"<<endl;
-                            oi(input,"请重新输入");
-                        }
-                    }
-                    catch(const invalid_argument& e){
-                        cerr<<"输入的总数无效，请输入一个有效的数字！"<<endl;
-                        oi(input,"请重新输入");
-                    }
-                    catch(const out_of_range& e){
-                        cerr<<"输入的总数超出了范围！"<<endl;
-                        oi(input,"请重新输入");
-                    }
-                    catch(const std::exception& e){
-                        cerr << e.what() << '\n';
-                        oi(input,"请重新输入");
-                    }
-                }
-                break;
-            case 8:
-                retry=true;
-                while(retry){
-                    try{
-                        int cast_int=stoi(input);
-                        if(cast_int>0&&cast_int<=target.QUANTITY()){
-                            target.change_stock(cast_int);
-                            log("修改总数："+input);
-                            retry=false;
-                        }else{
-                            cerr<<"库存必须大于0且小于等于总数！"<<endl;
-                            oi(input,"请重新输入");
-                        }
-                    }
-                    catch(const invalid_argument& e){
-                        cerr<<"输入的总数无效，请输入一个有效的数字！"<<endl;
-                        oi(input,"请重新输入");
-                    }
-                    catch(const out_of_range& e){
-                        cerr<<"输入的总数超出了范围！"<<endl;
-                        oi(input,"请重新输入");
-                    }
-                    catch(const std::exception& e){
-                        cerr << e.what() << '\n';
-                        oi(input,"请重新输入");
-                    }
-                }
-                break;
-            default:
-                break;
-            }
-            
-            Booklist_save(book_list,BOOKCSV);
-            op("修改成功！");
         }
         catch(const exception& e){
             log("按ISBN寻书失败");
@@ -1511,6 +1378,149 @@ MenuState edit_book(struct ListData &Dat,struct GlobalSettings &Cfg){
         }
     }
 
+    Booklist_infoheading(TAB);
+    target->showinfo(TAB);
+    
+    int c;
+    string input;
+    o("1.书名");
+    o("2.作者");
+    o("3.ISBN");
+    o("4.出版社");
+    o("5.出版日期");
+    o("6.单价");
+    o("7.总数");
+    o("8.库存");
+    o("");
+    oi(c,"请输入需要更改的项目",0,8);
+    if(c==0){return MANAGE_BOOK;}
+
+
+    oi(input,"请输入修改后的内容");
+
+    switch(c){
+    case 1:
+        target->change_title(input);
+        log("修改书名："+input);
+        break;
+    case 2:
+        target->change_author(input);
+        log("修改作者："+input);
+        break;
+    case 3:
+        while(input=="0"){
+            oi(input,"ISBN不能是0！请重新输入");
+        }
+        while(book_exist(book_list,input)){
+            oi(input,"该ISBN已存在！请重新输入");
+        }
+        target->change_isbn(input);
+        log("修改ISBN："+input);
+        break;
+    case 4:
+        target->change_press(input);
+        log("修改出版社："+input);
+        break;
+    case 5:
+        target->change_date(input);
+        log("修改出版日期："+input);
+        break;
+    case 6:
+        retry=true;
+        while(retry){
+            try{
+                double cast_double=stod(input);
+                if(cast_double>0&&cast_double<=PRICE_MAX){
+                    target->change_price(cast_double);
+                    log("修改单价："+input);
+                    retry=false;
+                }else if(cast_double<0){
+                    cerr<<"单价必须大于0！"<<endl;
+                    oi(input,"请重新输入"); 
+                }else if(cast_double>PRICE_MAX){
+                    cerr<<"单价太大了！"<<endl;
+                    oi(input,"请重新输入");
+                }else{
+                    cerr<<"单价无效！"<<endl;
+                    oi(input,"请重新输入");
+                }
+            }
+            catch(const invalid_argument& e){
+                cerr<<"输入的单价无效，请输入一个有效的数字！"<<endl;
+                oi(input,"请重新输入");
+            }
+            catch(const out_of_range& e){
+                cerr<<"输入的单价超出了范围！"<<endl;
+                oi(input,"请重新输入");
+            }
+            catch(const std::exception& e){
+                cerr << e.what() << '\n';
+                oi(input,"请重新输入");
+            }
+        }
+        break;
+    case 7:
+        retry=true;
+        while(retry){
+            try{
+                int cast_int=stoi(input);
+                if(cast_int>0&&cast_int>=target->STOCK()){
+                    target->change_quantity(cast_int);
+                    log("修改总数："+input);
+                    retry=false;
+                }else{
+                    cerr<<"总数必须大于0且大于等于当前库存！"<<endl;
+                    oi(input,"请重新输入");
+                }
+            }
+            catch(const invalid_argument& e){
+                cerr<<"输入的总数无效，请输入一个有效的数字！"<<endl;
+                oi(input,"请重新输入");
+            }
+            catch(const out_of_range& e){
+                cerr<<"输入的总数超出了范围！"<<endl;
+                oi(input,"请重新输入");
+            }
+            catch(const std::exception& e){
+                cerr << e.what() << '\n';
+                oi(input,"请重新输入");
+            }
+        }
+        break;
+    case 8:
+        retry=true;
+        while(retry){
+            try{
+                int cast_int=stoi(input);
+                if(cast_int>0&&cast_int<=target->QUANTITY()){
+                    target->change_stock(cast_int);
+                    log("修改总数："+input);
+                    retry=false;
+                }else{
+                    cerr<<"库存必须大于0且小于等于总数！"<<endl;
+                    oi(input,"请重新输入");
+                }
+            }
+            catch(const invalid_argument& e){
+                cerr<<"输入的总数无效，请输入一个有效的数字！"<<endl;
+                oi(input,"请重新输入");
+            }
+            catch(const out_of_range& e){
+                cerr<<"输入的总数超出了范围！"<<endl;
+                oi(input,"请重新输入");
+            }
+            catch(const std::exception& e){
+                cerr << e.what() << '\n';
+                oi(input,"请重新输入");
+            }
+        }
+        break;
+    default:
+        break;
+    }
+    
+    Booklist_save(book_list,BOOKCSV);
+    op("修改成功！");
     return MANAGE_BOOK;
 }
 
@@ -1521,22 +1531,22 @@ MenuState manage_user_menu(){
     return MAIN;
 }
 
-MenuState query_user(struct ListData &Dat){
+MenuState query_user(struct ListData Dat){
     log("查询所有用户信息");
     return MANAGE_USER;
 }
 
-MenuState add_user(struct ListData &Dat){
+MenuState add_user(struct ListData Dat){
     log("添加新的用户信息");
     return MANAGE_USER;
 }
 
-MenuState del_user(struct ListData &Dat){
+MenuState del_user(struct ListData Dat){
     log("删除已有用户信息");
     return MANAGE_USER;
 }
 
-MenuState edit_user(struct ListData &Dat){
+MenuState edit_user(struct ListData Dat){
     log("修改指定用户信息");
     return MANAGE_USER;
 }
@@ -1661,7 +1671,4 @@ int main(){
     Userlist_save(Dat.UserList,Cfg.USERCSV);
 
     log("程序默认结束");
-    
-    cls();
-    pause();
 }
