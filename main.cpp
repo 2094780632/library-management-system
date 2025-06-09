@@ -793,6 +793,11 @@ vector<User> Userlist_search(vector<User>& user_list,string key,string (User::*p
     //log("done");
 }
 
+//删除指定ID用户
+void Userlist_deluser(vector<User>& user_list,string id){
+    user_list.erase(remove_if(user_list.begin(),user_list.end(),[&id](const User& user) {return user.ID()==id;}),user_list.end());
+}
+
 //用户登录
 bool login(vector<User>& user_list,string &puser){
     log("login:尝试登录");
@@ -1716,12 +1721,59 @@ MenuState add_user(struct ListData &Dat,struct GlobalSettings &Cfg){
     return MAIN;
 }
 
-MenuState del_user(struct ListData &Dat){
+MenuState del_user(struct ListData &Dat,struct GlobalSettings &Cfg){
+    vector<User> &user_list=Dat.UserList;
+    string &USERCSV=Cfg.USERCSV;
+    int &TAB=Cfg.TAB;
+    
     log("删除已有用户信息");
+    string del_id;
+    vector<User> target;
+    bool retry=true;
+
+    while(retry&&del_id!="0"){
+        cls();
+        CT("借阅人管理\\删除已有用户信息");
+        oi(del_id,"请输入要删除用户的ID(输入0返回主菜单)");
+        if(del_id=="0"){return MAIN;}
+        try{
+            target=Userlist_search(user_list,del_id,User::ID);
+            log("按ID寻找用户成功");
+            retry=false;
+        }
+        catch(const exception& e){
+            log("按ID寻找用户失败");
+            cerr<<e.what()<<'\n';
+            pause();
+        }
+    }
+
+    User deltarget;
+    if(target.size()==1){
+        deltarget=target[0];
+    }else{
+        exit(3);
+    }
+
+    Userlist_infoheading(TAB);
+    deltarget.showinfo(TAB);
+    if(check("请确认要删除的借阅人信息")){
+        Userlist_deluser(user_list,del_id);
+        Userlist_save(user_list,USERCSV);
+        log("确认删除用户信息，ID："+del_id);
+        o("删除成功！");
+        pause();
+        return MAIN;
+    }else{
+        log("取消删除图书信息");
+        return MAIN;
+    }
+
+
     return MAIN;
 }
 
-MenuState edit_user(struct ListData &Dat){
+MenuState edit_user(struct ListData &Dat,struct GlobalSettings &Cfg){
     log("修改指定用户信息");
     return MAIN;
 }
@@ -1733,7 +1785,7 @@ MenuState report_book_menu(){
     return MAIN;
 }
 
-
+ 
 int main(){
     log("-----程序启动-----");
     title("程序初始化");
@@ -1825,11 +1877,11 @@ int main(){
                 break;
 
                 case DEL_USER:
-                menu_state=del_user(Dat);
+                menu_state=del_user(Dat,Cfg);
                 break;
 
                 case EDIT_USER:
-                menu_state=edit_user(Dat);
+                menu_state=edit_user(Dat,Cfg);
                 break;
 
             case REPORT_BOOK:
