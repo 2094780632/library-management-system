@@ -889,6 +889,9 @@ bool login(vector<User>& user_list,string &puser){
         -删除已有借阅人
         -修改已有借阅人
     -图书报损
+        -图书受损
+        -图书修复
+    -设置
     -退出程序
 */
 
@@ -913,6 +916,9 @@ enum MenuState{
             DEL_USER,
             EDIT_USER,
         REPORT_BOOK,
+            REPORT_DAMAGE,
+            REPORT_FIX,
+        SETTING,
     EXIT
 };
 
@@ -1900,10 +1906,109 @@ MenuState edit_user(struct ListData &Dat,struct GlobalSettings &Cfg){
 MenuState report_book_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
     log("进入图书报损菜单");
     title("图书报损");
-
+    CT("图书报损");
+    
+    vector<string> ops={"图书受损","图书修复"};
+    int c=option(ops,true);
+    switch(c){
+    case 1:
+        return REPORT_DAMAGE;
+        break;
+    case 2:
+        return REPORT_FIX;
+        break;
+    case 0:
+        return MAIN;
+        break;
+    default:
+        return MAIN;
+        break;
+    }
 
     return MAIN;
 }
+
+MenuState report_damage(struct ListData &Dat,struct GlobalSettings &Cfg){
+    vector<Book> &book_list=Dat.BookList;
+    vector<User> &user_list=Dat.UserList;
+    int &BRIEFTAB=Cfg.BRIEFTAB;
+    string &BOOKCSV=Cfg.BOOKCSV;
+    string &USERCSV=Cfg.USERCSV;
+
+    log("进入受损报告菜单");
+    CT("图书报损\\受损报告");
+
+    string report_book_isbn;
+    oi(report_book_isbn,"请输入受损图书的ISBN");
+    while(book_exist(book_list,report_book_isbn)){
+        oi(report_book_isbn,"无法找到书籍！请重新输入");
+    }
+    while(!Booklist_isbn(book_list,report_book_isbn).isborrowed()){
+        oi(report_book_isbn,"无人借阅过此书！请重新输入");
+    }
+    
+    Booklist_briefheading(false,BRIEFTAB);
+    Booklist_isbn(book_list,report_book_isbn).briefinfo(BRIEFTAB);
+
+    if(check("请确认受损图书信息")){
+        Booklist_isbn(book_list,report_book_isbn).borrow(1);
+        Userlist_element_id(user_list,"0").borrow(report_book_isbn);
+        Booklist_save(book_list,BOOKCSV);
+        Userlist_save(user_list,USERCSV);
+        log("成功报损");
+        op("成功报损，即将返回主菜单！");
+        return MAIN;
+    }else{
+        return MAIN;
+    }
+    return MAIN;
+}
+
+MenuState report_fix(struct ListData &Dat,struct GlobalSettings &Cfg){
+    vector<Book> &book_list=Dat.BookList;
+    vector<User> &user_list=Dat.UserList;
+    int &BRIEFTAB=Cfg.BRIEFTAB;
+    string &BOOKCSV=Cfg.BOOKCSV;
+    string &USERCSV=Cfg.USERCSV;
+
+    log("进入受损报告菜单");
+    CT("图书报损\\修复报告");
+
+    vector<string> damage_list=Userlist_element_id(user_list,"0").BORROWED_LIST();
+    string report_book_isbn;
+
+    if(damage_list.size()==0){
+        op("暂无受损图书，即将返回主菜单！");
+        return MAIN;
+    }
+
+    Booklist_briefheading(false,BRIEFTAB);
+    for(auto& list_isbn:damage_list){
+        Booklist_isbn(book_list,list_isbn).briefinfo(BRIEFTAB);
+    }
+    oi(report_book_isbn,"请输入修复的书籍的ISBN");
+    auto it=find(damage_list.begin(),damage_list.end(),report_book_isbn);
+    while(it==damage_list.end()){
+        if(report_book_isbn=="0"){return MAIN;}
+        oi(report_book_isbn,"无效输入！请重新输入");
+        auto it=find(damage_list.begin(),damage_list.end(),report_book_isbn);
+    }
+
+    Booklist_isbn(book_list,report_book_isbn).returnbook();
+    Booklist_save(book_list,BOOKCSV);
+    Userlist_borrowed_isbn(user_list,report_book_isbn).returnBook(report_book_isbn);
+    Userlist_save(user_list,USERCSV);
+
+    return MAIN;
+}
+
+//设置
+MenuState setting_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
+    log("进入设置菜单");
+    CT("设置");
+    return MAIN;
+}
+
 
 //重启
 void restart(){
@@ -2027,6 +2132,18 @@ int main(){
 
             case REPORT_BOOK:
                 menu_state=report_book_menu(Dat,Cfg);
+                break;
+
+                case REPORT_DAMAGE:
+                menu_state=report_damage(Dat,Cfg);
+                break;
+
+                case REPORT_FIX:
+                menu_state=report_fix(Dat,Cfg);
+                break;
+
+            case SETTING:
+                menu_state=setting_menu(Dat,Cfg);
                 break;
 
             default:
