@@ -438,6 +438,7 @@ void Booklist_init(vector<Book>& book_list,string csv){
     ifstream file(csv);
     if(!file.is_open()){
         log("初始化图书数据时无法打开csv文件");
+        throw runtime_error("无法初始化图书数据！");
         cerr<<"无法打开文件："<<csv<<endl;
         exit(1);
     }
@@ -451,6 +452,14 @@ void Booklist_init(vector<Book>& book_list,string csv){
     }
     log("成功初始化图书数据");
     file.close();
+}
+
+void Booklist_save(vector<Book>& book_list,string csv);
+void Booklist_defaultcsv(){
+    log("Booklist_defaultcsv");
+    Book newbook("title","author","isbn","C++","2025-6-1",61.6,1,0);
+    vector<Book> empty={};
+    Booklist_save(empty,"book.csv");
 }
 
 //保存图书数据
@@ -687,6 +696,7 @@ void Userlist_init(vector<User>& user_list,string csv){
     ifstream file(csv);
     if(!file.is_open()){
         log("初始化用户数据时无法打开csv文件");
+        throw runtime_error("无法初始化用户数据！");
         cerr<<"无法打开文件："<<csv<<endl;
         exit(1);
     }
@@ -706,6 +716,15 @@ void Userlist_init(vector<User>& user_list,string csv){
     }
     log("成功初始化用户数据");
     file.close();
+}
+
+void Userlist_save(vector<User>& user_list,string csv);
+void Userlist_defaultcsv(){
+    log("Userlist_defaultcsv");
+    User Report("Report","0","R",{});
+    User Admin("Admin","1","A",{});
+    vector<User> defaultlist={Report,Admin};
+    Userlist_save(defaultlist,"user.csv");
 }
 
 //读取用户数据
@@ -1785,7 +1804,12 @@ MenuState report_book_menu(){
     return MAIN;
 }
 
- 
+//重启
+void restart(){
+    system("start main.exe");
+    exit(1);
+}
+
 int main(){
     log("-----程序启动-----");
     title("程序初始化");
@@ -1793,7 +1817,7 @@ int main(){
     //默认设置
     Config Cfg;
     Cfg.LOG="log.txt";
-    Cfg.BOOKCSV="test.csv";
+    Cfg.BOOKCSV="book.csv";
     Cfg.USERCSV="user.csv";
     Cfg.TAB=20;
     Cfg.BRIEFTAB=30;
@@ -1801,9 +1825,25 @@ int main(){
 
     Data Dat;
 
-    Booklist_init(Dat.BookList,Cfg.BOOKCSV);
-
-    Userlist_init(Dat.UserList,Cfg.USERCSV);
+    try{
+        Booklist_init(Dat.BookList,Cfg.BOOKCSV);
+    }
+    catch(const exception& e){
+        cerr << e.what() << '\n';
+        Booklist_defaultcsv();
+        op("即将重启程序！");
+        restart();
+    }
+    
+    try{
+        Userlist_init(Dat.UserList,Cfg.USERCSV);
+    }
+    catch(const exception& e){
+        cerr << e.what() << '\n';
+        Userlist_defaultcsv();
+        op("即将重启程序！");
+        restart();
+    }
 
     cout<<"BookList CSV:"<<Cfg.BOOKCSV<<endl;
     cout<<"UserList CSV:"<<Cfg.USERCSV<<endl;
