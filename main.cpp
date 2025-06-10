@@ -332,28 +332,28 @@ class Book{
         unsigned int STOCK() const{return stock;}
 
         //修改单个属性
-        void change_title(string value){
+        void change_title(string const &value){
             this->title=value;
         }
-        void change_author(string value){
+        void change_author(string const &value){
             this->author=value;
         }
-        void change_isbn(string value){
+        void change_isbn(string const &value){
             this->isbn=value;
         }
-        void change_press(string value){
+        void change_press(string const &value){
             this->press=value;
         }
-        void change_date(string value){
+        void change_date(string const &value){
             this->date=value;
         }
-        void change_price(double value){
+        void change_price(double const &value){
             this->price=value;
         }
-        void change_quantity(unsigned int value){
+        void change_quantity(unsigned int const &value){
             this->quantity=value;
         }
-        void change_stock(unsigned int value){
+        void change_stock(unsigned int const &value){
             this->stock=value;
         }
 
@@ -631,6 +631,18 @@ class User{
         string STATUS() const{return status;}
         vector<string> BORROWED_LIST() const{return borrowed_list;}
 
+        //修改单个属性
+        void change_name(string const &value){
+            this->name=value;
+        }
+        void change_id(string const &value){
+            this->id=value;
+        }
+        void change_status(string const &value){
+            this->status=value;
+        }
+
+
         //信息展示
         void showinfo(int &TAB){
             if(status!="R"){
@@ -782,7 +794,17 @@ User& Userlist_element(vector<User>& user_list,string name){
         if(user.NAME()==name){return user;}
     }
     log("调用用户对象失败(NAME)");
-    throw "调用用户对象失败(NAME)";
+    throw runtime_error("调用用户对象失败(NAME)");
+}
+
+//返回指定用户对象（ID）
+User& Userlist_element_id(vector<User>& user_list,string id){
+    log("调用用户对象："+id);
+    for(auto& user:user_list){
+        if(user.ID()==id){return user;}
+    }
+    log("调用用户对象失败(ID)");
+    throw runtime_error("调用用户对象失败(ID)");
 }
 
 //借过某书的用户（第一个）
@@ -829,12 +851,15 @@ bool login(vector<User>& user_list,string &puser){
 
     string (User::*pfunc)() const=&User::NAME;
     
-    if(Userlist_search(user_list,username,pfunc).size()==1){
+    try{
+        Userlist_search(user_list,username,pfunc);
         log("login:登录成功");
         //op("登录成功！");
         puser=username;
         return true;
-    }else{
+    }
+    catch(const exception& e){
+        cerr << e.what() << '\n';
         log("login:登录失败");
         op("借阅人不存在！请重新尝试");
         puser="";
@@ -1432,7 +1457,7 @@ MenuState edit_book(struct ListData &Dat,struct GlobalSettings &Cfg){
             retry=false;
             o("请输入需要更改的项目"); 
             vector<string> ops={"书名","作者","ISBN","出版社","出版日期","单价","总数","库存"};
-            int c=option(ops,false);
+            int c=option(ops,true);
 
             if(c==0){return MANAGE_BOOK;}
 
@@ -1556,6 +1581,10 @@ MenuState edit_book(struct ListData &Dat,struct GlobalSettings &Cfg){
                     }
                 }
                 break;
+            case 0:
+                return MANAGE_BOOK;
+                break;
+
             default:
                 break;
             }
@@ -1793,14 +1822,86 @@ MenuState del_user(struct ListData &Dat,struct GlobalSettings &Cfg){
 }
 
 MenuState edit_user(struct ListData &Dat,struct GlobalSettings &Cfg){
+    vector<User> &user_list=Dat.UserList;
+    string &USERCSV=Cfg.USERCSV;
+    int &TAB=Cfg.TAB;
+    
     log("修改指定用户信息");
+    string edit_id;
+    bool retry=true;
+    while(retry&&edit_id!="0"){
+        cls();
+        CT("借阅人管理\\编辑指定用户信息");
+        oi(edit_id,"请输入要编辑的借阅人ID(输入0返回上一级)");
+        if(edit_id=="0"){return MAIN;}
+        try{
+           User& target=Userlist_element_id(user_list,edit_id);
+           log("按ID寻找用户成功");
+           Userlist_infoheading(TAB);
+           target.showinfo(TAB);
+           retry=false;
+           
+           o("请输入需要更改的项目");
+           vector<string> ops={"名字","ID","状态","借阅列表"};
+           int c=option(ops,true);
+
+           if(c==0||c==4){return MAIN;}
+
+           string input;
+           oi(input,"请输入修改后的内容");
+
+           switch(c){
+            case 1:
+                target.change_name(input);
+                log("修改名字："+input);
+                break;
+            case 2:
+                while(input=="0"){
+                    oi(input,"ID不能是0！请重新输入");
+                }
+                while(user_exist(user_list,input)){
+                    oi(input,"该ID已存在！请重新输入");
+                }
+                target.change_id(input);
+                log("修改ID："+input);
+                break;
+            case 3:
+                while(input!="A"&&input!="N"&&input!="B"){
+                    oi(input,"用户状态只能是A（管理员用户）,N（普通用户）或B（黑名单用户）！请重新输入");
+                }
+                target.change_status(input);
+                log("修改用户状态"+input);
+                break;
+            case 4:
+                op("借阅列表请在借书/还书菜单中操作！即将跳转至主菜单");
+                return MAIN;
+            case 0:
+                return MAIN;
+                break;
+            default:
+                return MAIN;
+                break;
+           }
+
+           Userlist_save(user_list,USERCSV);
+           op("修改成功！");
+        }
+        catch(const std::exception& e){
+            log("按ID寻找用户失败");
+            cerr << e.what() << '\n';
+            pause();
+        }
+    }
+    
     return MAIN;
 }
 
 //图书报损菜单
-MenuState report_book_menu(){
+MenuState report_book_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
     log("进入图书报损菜单");
     title("图书报损");
+
+
     return MAIN;
 }
 
@@ -1925,7 +2026,7 @@ int main(){
                 break;
 
             case REPORT_BOOK:
-                menu_state=report_book_menu();
+                menu_state=report_book_menu(Dat,Cfg);
                 break;
 
             default:
