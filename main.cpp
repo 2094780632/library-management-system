@@ -10,6 +10,7 @@
 #include<ctime>
 #include<vector>
 #include<string>
+#include<mutex>
 using namespace std;
 
 /*
@@ -22,10 +23,89 @@ using namespace std;
 */
 
 ///全局数据与设置
+//日志记录系统
+//log类型
+enum logtype{
+    I,
+    E,
+    F,
+    W
+};
+class Log{
+    public:
+        static Log& getInstance(){
+            static Log instance;
+            return instance;
+        }
+
+        void setlogfile(const string new_log){
+            lock_guard<mutex> lock(mutex_);
+            logfilename=new_log;
+        }
+
+        
+        //日志记录
+        int log(const logtype lt=I,const string &text){
+            lock_guard<mutex> lock(mutex_);
+            //获取时间
+            auto now=chrono::system_clock::now();
+            time_t now_c=chrono::system_clock::to_time_t(now);
+            stringstream ss;
+            ss<<put_time(localtime(&now_c),"%Y-%m-%d %H:%M:%S");
+            string log_time;
+            log_time=ss.str();
+            
+            ofstream logs;
+            logs.open(logfilename,ios::app);
+            //判断是否打开成功
+            if (!logs.is_open()) {
+                cerr << "无法写入log记录"<<endl;
+                return 1;
+            }
+
+            string logt;
+            switch(lt){
+            case I:
+                logt="INFO";
+                break;
+            case E:
+                logt="ERROR";
+                break;
+            case F:
+                logt="FAIL";
+                break;
+            case W:
+                logt="WARNING";
+            default:
+                logt="?";
+                break;
+            }
+
+            string log_str=log_time+":["+logt+']'+text+'\n';
+            logs<<log_str;
+            //logs.close();
+            return 0;
+        }
+                
+    private:
+        Log():logfilename("log.txt"){}
+        Log(const Log&)=delete;
+        Log& operator=(const Log&)=delete;
+
+        string logfilename;
+        mutex mutex_;
+};
+//日志记录
+int log(logtype lt,const string &text){
+    Log::getInstance().log(lt,text);
+}
+void setlogpath(const string LOG){
+    Log::getInstance().setlogfile(LOG);
+}
+
 //预先声明
 class Book;
 class User;
-int log(const string &text);
 
 typedef struct GlobalSettings{
     string LOG;//存放日志的文件
@@ -77,7 +157,7 @@ void i(T& v){
             break;
         }else{
             //失败
-            log("输入合法化检测失败");
+            log(F,"i():输入合法化检测失败");
             cin.clear();//清除错误状态
             cin.sync();//清空缓存数据
             o("输入不合法，请重新输入:");
@@ -93,7 +173,7 @@ void i(int& v,int min,int max){
             break;
         }else{
             //失败
-            log("int型输入合法化检测失败");
+            log(F,"i():int型输入合法化检测失败");
             cin.clear();//清除错误状态
             cin.sync();//清空缓存数据
             o("输入不合法，请重新输入:");
@@ -137,7 +217,7 @@ bool check(string tip){
         oi(in,"请重新输入");
     }
     if(in=="y"){return true;}else if(in=="n"){return false;}
-    log("no return");
+    log(E,"check():no return");
     return false;
 }
 
@@ -217,20 +297,20 @@ int option(vector<string> &options,bool back){
 ///文件系统
 //读文件，以string形式返回文件内容
 string f_readall(const string& file_name){
-    log("尝试读取文件："+file_name);
+    log(I,"f_readall():尝试读取文件："+file_name);
     ifstream file;
     file.open(file_name);
     string content,line;
     //判断是否打开成功
     if(file.is_open()){
-        log("成功读取文件");
+        log(I,"f_readall():成功读取文件"+file_name);
         while (getline(file,line)){
             content+=line+'\n';
         }
         file.close();
         return content;
     }else{
-        log("无法读取文件"+file_name);
+        log(F,"f_readall():无法读取文件"+file_name);
         cerr<<"无法打开文件："<<file_name<<endl;
         return "";
     }
@@ -243,12 +323,12 @@ string f_readline(const string& file_name){
     string line;
     //判断是否打开成功
     if(file.is_open()){
-        log("成功逐行读取文件");
+        log(I,"f_readline():成功逐行读取文件"+file_name);
         getline(file,line);
         file.close();
         return line;
     }else{
-        log("无法逐行读取文件"+file_name);
+        log(I,"f_readline():无法逐行读取文件"+file_name);
         cerr<<"无法打开文件："<<file_name<<endl;
         return "";
     }
@@ -262,14 +342,14 @@ int f_write(const string& file_name,const string& text,const string& mode){
     }else if(mode=="trunc"){
         file.open(file_name,ios::trunc);
     }else{
-        log("无效写入模式");
+        log(E,"f_write():无效写入模式");
         cerr << "无法打开文件: "<<file_name<<endl;
         return 1;
     }
 
     //判断是否打开成功
     if (!file.is_open()) {
-        log("无法写入文件"+file_name);
+        log(E,"f_write():无法写入文件"+file_name);
         cerr << "无法打开文件: "<<file_name<<endl;
         return 1;
     }
@@ -277,37 +357,11 @@ int f_write(const string& file_name,const string& text,const string& mode){
     file.close();
 
     if(mode=="app"){
-        log("成功追加写入文件："+file_name);
+        log(I,"f_write():成功追加写入文件："+file_name);
     }else if(mode=="trunc"){
-        log("成功覆盖写入文件："+file_name);
+        log(I,"f_write():成功覆盖写入文件："+file_name);
     }
 
-    return 0;
-}
-
-//日志记录
-int log(const string &text){
-    string LOG="log.txt";
-    //获取时间
-    auto now=chrono::system_clock::now();
-    time_t now_c=chrono::system_clock::to_time_t(now);
-    stringstream ss;
-    ss<<put_time(localtime(&now_c),"%Y-%m-%d %H:%M:%S");
-    string log_time;
-    log_time=ss.str();
-    //写入记录
-    //f_write(LOG,log_time+":"+text+'\n');不可以这样写！！因为f_write中也有log的调用，会导致这两个函数互相调用陷入死循环
-    ofstream log;
-    log.open(LOG,ios::app);
-    //判断是否打开成功
-    if (!log.is_open()) {
-        cerr << "无法写入log记录"<<endl;
-        return 1;
-    }
-
-    string log_str=log_time+":"+text+'\n';
-    log<<log_str;
-    log.close();
     return 0;
 }
 
@@ -404,7 +458,7 @@ class Book{
         }
 
         void debug_showinfo(){
-            log("DEBUGBOOKINFO");
+            log(I,"BOOK:DEBUGBOOKINFO");
             o(title);
             o(author);
             o(isbn);
@@ -437,7 +491,7 @@ class Book{
 void Booklist_init(vector<Book>& book_list,string csv){
     ifstream file(csv);
     if(!file.is_open()){
-        log("初始化图书数据时无法打开csv文件");
+        log(F,"Booklist_init():初始化图书数据时无法打开csv文件");
         throw runtime_error("无法初始化图书数据！");
         cerr<<"无法打开文件："<<csv<<endl;
         exit(1);
@@ -450,13 +504,13 @@ void Booklist_init(vector<Book>& book_list,string csv){
         while(getline(ss,item[i],',')){i++;}
         book_list.emplace_back(item[0],item[1],item[2],item[3],item[4],stod(item[5]),stoul(item[6]),stoul(item[7]));
     }
-    log("成功初始化图书数据");
+    log(I,"Booklist_init():成功初始化图书数据");
     file.close();
 }
 
 void Booklist_save(vector<Book>& book_list,string csv);
 void Booklist_defaultcsv(){
-    log("Booklist_defaultcsv");
+    log(I,"Booklist_defaultcsv():初始化BOOKCSV");
     Book newbook("title","author","isbn","C++","2025-6-1",61.6,1,0);
     vector<Book> empty={};
     Booklist_save(empty,"book.csv");
@@ -464,7 +518,7 @@ void Booklist_defaultcsv(){
 
 //保存图书数据
 void Booklist_save(vector<Book>& book_list,string csv){
-    log("保存图书数据");
+    log(I,"Booklist_save():保存图书数据");
     string save="";
     for(auto& book:book_list){
         save+=book.savestr()+'\n';
@@ -475,7 +529,7 @@ void Booklist_save(vector<Book>& book_list,string csv){
 
 //读取图书内容
 void Booklist_info(vector<Book>& book_list,bool isid,int &TAB){
-    log("尝试读取图书数据");
+    log(I,"Booklist_info():尝试读取图书数据");
     int i=1;
     for(auto& book:book_list){
         if(isid){
@@ -489,7 +543,7 @@ void Booklist_info(vector<Book>& book_list,bool isid,int &TAB){
 
 //读取简要内容
 void Booklist_briefinfo(vector<Book>& book_list,bool isid,int &BRIEFTAB){
-    log("尝试读取图书数据");
+    log(I,"Booklist_briefinfo():尝试读取图书数据");
     int i=1;
     for(auto& book:book_list){
         if(isid){
@@ -528,9 +582,9 @@ void Booklist_briefheading(bool isid,int &BRIEFTAB){
 
 //调用指定索引的图书对象
 Book& Booklist_element(vector<Book>& book_list,int index){
-    log("调用图书对象,index:"+to_string(index));
+    log(I,"Booklist_element():调用图书对象,index:"+to_string(index));
     if (index < 0 || index >= book_list.size()) {
-        log("在调用图书对象时索引超出范围,index:"+to_string(index));
+        log(E,"Booklist_element():在调用图书对象时索引超出范围,index:"+to_string(index));
         throw out_of_range("索引超出范围");
     }
     return book_list[index];
@@ -538,12 +592,12 @@ Book& Booklist_element(vector<Book>& book_list,int index){
 
 //线性查找ISBN图书对象
 Book& Booklist_isbn(vector<Book>& book_list,string isbn){
-    log("调用指定ISBN书籍对象");
+    log(I,"Booklist_isbn():调用指定ISBN书籍对象");
     auto it=find_if(book_list.begin(),book_list.end(),[&isbn](const Book& book){
         return book.ISBN()==isbn;
     });
     if (it == book_list.end()) {
-        log("ISBN图书对象访问失败");
+        log(E,"Booklist_isbn():ISBN图书对象访问失败");
         throw runtime_error("无法找到对应书籍！");
     }
     return *it;
@@ -570,7 +624,7 @@ vector<Book> Booklist_search(vector<Book>& book_list,string key,string (Book::*p
     }
     //log("cash");
     if(target_list.empty()){
-        log("无法找到指定书目,key:"+key);
+        log(F,"Booklist_search():无法找到指定书目,key:"+key);
         throw runtime_error("无法找到指定书目");
     }
     return target_list;
@@ -707,7 +761,7 @@ vector<string> apartlist(string data){
 void Userlist_init(vector<User>& user_list,string csv){
     ifstream file(csv);
     if(!file.is_open()){
-        log("初始化用户数据时无法打开csv文件");
+        log(F,"Userlist_init():初始化用户数据时无法打开csv文件");
         throw runtime_error("无法初始化用户数据！");
         cerr<<"无法打开文件："<<csv<<endl;
         exit(1);
@@ -726,13 +780,13 @@ void Userlist_init(vector<User>& user_list,string csv){
         items.push_back(line);
         user_list.emplace_back(items[0],items[1],items[2],apartlist(items[3]));
     }
-    log("成功初始化用户数据");
+    log(I,"Userlist_init():成功初始化用户数据");
     file.close();
 }
 
 void Userlist_save(vector<User>& user_list,string csv);
 void Userlist_defaultcsv(){
-    log("Userlist_defaultcsv");
+    log(I,"Userlist_defaultcsv():初始化USERCSV");
     User Report("Report","0","R",{});
     User Admin("Admin","1","A",{});
     vector<User> defaultlist={Report,Admin};
@@ -741,7 +795,7 @@ void Userlist_defaultcsv(){
 
 //读取用户数据
 void Userlist_info(vector<User>& user_list,int &TAB){
-    log("尝试读取用户数据");
+    log(I,"Userlist_info():尝试读取用户数据");
     //int i=1;
     for(auto& user:user_list){
         //o(i,TAB);
@@ -761,7 +815,7 @@ void Userlist_infoheading(int &TAB){
 
 //保存用户数据
 void Userlist_save(vector<User>& user_list,string csv){
-    log("保存用户数据");
+    log(I,"Userlist_save():保存用户数据");
     string save="";
     for(auto& user:user_list){
         save+=user.savestr()+'\n';
@@ -789,33 +843,33 @@ int Userlist_Borrowsamebook(vector<User>& user_list,string isbn){
 
 //返回指定用户对象（用户名）
 User& Userlist_element(vector<User>& user_list,string name){
-    log("调用用户对象："+name);
+    log(I,"Userlist_element():调用用户对象："+name);
     for(auto& user:user_list){
         if(user.NAME()==name){return user;}
     }
-    log("调用用户对象失败(NAME)");
+    log(F,"Userlist_element():调用用户对象失败(NAME)");
     throw runtime_error("调用用户对象失败(NAME)");
 }
 
 //返回指定用户对象（ID）
 User& Userlist_element_id(vector<User>& user_list,string id){
-    log("调用用户对象："+id);
+    log(I,"Userlist_element_id():调用用户对象："+id);
     for(auto& user:user_list){
         if(user.ID()==id){return user;}
     }
-    log("调用用户对象失败(ID)");
+    log(F,"Userlist_element_id():调用用户对象失败(ID)");
     throw runtime_error("调用用户对象失败(ID)");
 }
 
 //借过某书的用户（第一个）
 User& Userlist_borrowed_isbn(vector<User>& user_list,string isbn){
-    log("调用用户对象(ISBN) ："+isbn);
+    log(I,"Userlist_borrowed_isbn():调用用户对象(ISBN) ："+isbn);
     for(auto& user:user_list){
         if(user.is_borrowed(isbn)){
             return user;
         }
     }
-    log("调用用户对象失败(ISBN)");
+    log(F,"Userlist_borrowed_isbn():调用用户对象失败(ISBN)");
     throw "调用用户对象失败(ISBN)";
 }
 
@@ -827,7 +881,7 @@ vector<User> Userlist_search(vector<User>& user_list,string key,string (User::*p
     }
     //log("cash");
     if(target_list.empty()){
-        log("无法找到指定用户,key:"+key);
+        log(F,"Userlist_search():无法找到指定用户,key:"+key);
         throw runtime_error("无法找到指定用户");
     }
     return target_list;
@@ -841,7 +895,7 @@ void Userlist_deluser(vector<User>& user_list,string id){
 
 //用户登录
 bool login(vector<User>& user_list,string &puser){
-    log("login:尝试登录");
+    log(I,"login():尝试登录");
     string username;
     //o("登录");
 
@@ -853,14 +907,14 @@ bool login(vector<User>& user_list,string &puser){
     
     try{
         Userlist_search(user_list,username,pfunc);
-        log("login:登录成功");
+        log(I,"login:登录成功");
         //op("登录成功！");
         puser=username;
         return true;
     }
     catch(const exception& e){
         cerr << e.what() << '\n';
-        log("login:登录失败");
+        log(F,"login:登录失败");
         op("借阅人不存在！请重新尝试");
         puser="";
         return false;
@@ -924,7 +978,7 @@ enum MenuState{
 
 //主菜单
 MenuState main_menu(){
-    log("进入主菜单");
+    log(I,"main_menu():进入主菜单");
     title("图书馆管理系统");
     cls();
     //menu_level=0;
@@ -959,7 +1013,7 @@ MenuState main_menu(){
             return EXIT;
             break;
         default:
-            log("主菜单默认退出");
+            log(I,"main_menu():主菜单默认退出");
             return MAIN;
             break;
     }
@@ -973,7 +1027,7 @@ MenuState borrow_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
     string &BOOKCSV=Cfg.BOOKCSV;
     string &USERCSV=Cfg.USERCSV;
 
-    log("进入借书菜单");
+    log(I,"borrow_menu():进入借书菜单");
     title("借书");
     cls();
     string username;
@@ -1039,7 +1093,7 @@ MenuState borrow_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
 
         //保险条件
         if(book_list[index].STOCK()>0){
-            log("书籍"+book_list[index].TITLE()+"由"+Userlist_element(user_list,username).NAME()+"借出1本");
+            log(I,"borrow_menu():书籍"+book_list[index].TITLE()+"由"+Userlist_element(user_list,username).NAME()+"借出1本");
             book_list[index].borrow(1);
             Userlist_element(user_list,username).borrow(book_list[index].ISBN());
             Booklist_save(book_list,BOOKCSV);
@@ -1060,7 +1114,7 @@ MenuState return_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
     string &BOOKCSV=Cfg.BOOKCSV;
     string &USERCSV=Cfg.USERCSV;
 
-    log("进入还书菜单");
+    log(I,"return_menu():进入还书菜单");
     title("还书");
     cls();
     //Book->是否被借,User->是否唯一
@@ -1070,36 +1124,36 @@ MenuState return_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
 
     //是否存在
     if(!book_exist(book_list,returnbookisbn)){
-        log("尝试归还一本不存在的书，退出还书菜单");
+        log(E,"return_menu():尝试归还一本不存在的书，退出还书菜单");
         op("这本书不存在！");
         return MAIN;
     }
 
     if(!Booklist_isbn(book_list,returnbookisbn).isborrowed()){
-        log("尝试归还一本没有被借过的书，退出还书菜单");
+        log(E,"return_menu():尝试归还一本没有被借过的书，退出还书菜单");
         op("这本书没有被借过！");
         return MAIN;
     }
     switch(Userlist_Borrowsamebook(user_list,returnbookisbn)){
     case 0:
-        log("尝试归还一本没有人借过的书，退出还书菜单");
+        log(E,"return_menu():尝试归还一本没有人借过的书，退出还书菜单");
         op("这本书没有人借过！");
         break;
     
     case 1:
-        log("尝试归还只有一个人借过的书");
+        log(I,"return_menu():尝试归还只有一个人借过的书");
 
         Booklist_isbn(book_list,returnbookisbn).returnbook();
         Booklist_save(book_list,BOOKCSV);
         Userlist_borrowed_isbn(user_list,returnbookisbn).returnBook(returnbookisbn);
         Userlist_save(user_list,USERCSV);
 
-        log("归还成功！");
+        log(I,"return_menu():归还成功！");
         op("归还成功！");
         return MAIN;
         break;
     default:
-        log("尝试归还有多个人借过的书");
+        log(I,"return_menu():尝试归还有多个人借过的书");
         cls();
         string username;
         if(!login(user_list,username)){
@@ -1110,7 +1164,7 @@ MenuState return_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
             Userlist_element(user_list,username).returnBook(returnbookisbn);
             Userlist_save(user_list,USERCSV);
 
-            log("归还成功！");
+            log(I,"return_menu():归还成功！");
             op("归还成功！");
             return MAIN;
         }
@@ -1124,7 +1178,7 @@ MenuState return_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
 
 //查书菜单
 MenuState search_menu(){
-    log("进入查书菜单");
+    log(I,"serach_menu():进入查书菜单");
     title("查书");
     cls();
 
@@ -1160,7 +1214,7 @@ MenuState search_book_by_title(struct ListData &Dat,struct GlobalSettings &Cfg){
     vector<Book> &book_list=Dat.BookList;
     int &TAB=Cfg.TAB;
     
-    log("按书名查书");
+    log(I,"search_book_by_title():按书名查书");
     string searchbookname;
     vector<Book> target;
     bool retry=true;
@@ -1173,11 +1227,11 @@ MenuState search_book_by_title(struct ListData &Dat,struct GlobalSettings &Cfg){
         if(searchbookname=="0"){return SEARCH_BOOK;}
         try{
             target=Booklist_search(book_list,searchbookname,pfunc);
-            log("按书名查书成功");
+            log(I,"search_book_by_title():按书名查书成功");
             retry=false;
         }
         catch(const exception& e){
-            log("按书名查书失败");
+            log(F,"search_book_by_title():按书名查书失败");
             cerr<<e.what()<<'\n';
             pause();
         }
@@ -1194,7 +1248,7 @@ MenuState search_book_by_author(struct ListData &Dat,struct GlobalSettings &Cfg)
     vector<Book> &book_list=Dat.BookList;
     int &TAB=Cfg.TAB;
 
-    log("按作者查书");
+    log(I,"search_book_by_author():按作者查书");
     string searchbookauthor;
     vector<Book> target;
     bool retry=true;
@@ -1207,11 +1261,11 @@ MenuState search_book_by_author(struct ListData &Dat,struct GlobalSettings &Cfg)
         if(searchbookauthor=="0"){return SEARCH_BOOK;}
         try{
             target=Booklist_search(book_list,searchbookauthor,pfunc);
-            log("按作者查书成功");
+            log(I,"search_book_by_author():按作者查书成功");
             retry=false;
         }
         catch(const exception& e){
-            log("按作者查书失败");
+            log(F,"search_book_by_author():按作者查书失败");
             cerr<<e.what()<<'\n';
             pause();
         }
@@ -1229,7 +1283,7 @@ MenuState search_book_by_user(struct ListData &Dat,struct GlobalSettings &Cfg){
     vector<User> &user_list=Dat.UserList;
     int &TAB=Cfg.TAB;
 
-    log("按借阅人查书");
+    log(I,"search_book_by_user()按借阅人查书");
     cls();
     string searchbookuser;
     vector<Book> target;
@@ -1261,7 +1315,7 @@ MenuState search_book_by_isbn(struct ListData &Dat,struct GlobalSettings &Cfg){
     vector<Book> &book_list=Dat.BookList;
     int &TAB=Cfg.TAB;
 
-    log("按ISBN查书");
+    log(I,"search_book_by_isbn():按ISBN查书");
     string searchbookisbn;
     vector<Book> target;
     bool retry=true;
@@ -1274,11 +1328,11 @@ MenuState search_book_by_isbn(struct ListData &Dat,struct GlobalSettings &Cfg){
         if(searchbookisbn=="0"){return SEARCH_BOOK;}
         try{
             target=Booklist_search(book_list,searchbookisbn,pfunc);
-            log("按ISBN查书成功");
+            log(I,"search_book_by_isbn():按ISBN查书成功");
             retry=false;
         }
         catch(const exception& e){
-            log("按ISBN查书失败");
+            log(F,"search_book_by_isbn():按ISBN查书失败");
             cerr<<e.what()<<'\n';
             pause();
         }
@@ -1293,7 +1347,7 @@ MenuState search_book_by_isbn(struct ListData &Dat,struct GlobalSettings &Cfg){
 
 //图书管理菜单
 MenuState manage_book_menu(){
-    log("进入图书管理菜单");
+    log(I,"manage_book_menu():进入图书管理菜单");
     title("图书管理");
     cls();
 
@@ -1328,7 +1382,7 @@ MenuState query_book(struct ListData &Dat,struct GlobalSettings &Cfg){
     vector<Book> &book_list=Dat.BookList;
     int &TAB=Cfg.TAB;
 
-    log("查询所有图书信息");
+    log(I,"query_book():查询所有图书信息");
     CT("图书管理\\查询所有图书信息");
     Booklist_infoheading(TAB);
     Booklist_info(book_list,false,TAB);
@@ -1341,7 +1395,7 @@ MenuState add_book(struct ListData &Dat,struct GlobalSettings &Cfg){
     string &BOOKCSV=Cfg.BOOKCSV;
     int &TAB=Cfg.TAB;
 
-    log("添加新的图书");
+    log(I,"add_book():添加新的图书");
     string new_title,new_author,new_isbn,new_press,new_date;
     double new_price;
     int new_quantity,new_stock;
@@ -1385,13 +1439,13 @@ MenuState add_book(struct ListData &Dat,struct GlobalSettings &Cfg){
     if(check("请确认新的图书信息")){
         book_list.push_back(new_book);
         Booklist_save(book_list,BOOKCSV);
-        log("确认添加新的图书信息");
+        log(I,"add_book():确认添加新的图书信息");
 
         o("添加成功！");
         pause();
         return MANAGE_BOOK;
     }else{
-        log("取消添加新的图书信息");
+        log(I,"add_book():取消添加新的图书信息");
         return MANAGE_BOOK;
     }
 
@@ -1404,7 +1458,7 @@ MenuState del_book(struct ListData &Dat,struct GlobalSettings &Cfg){
     string &BOOKCSV=Cfg.BOOKCSV;
     int &TAB=Cfg.TAB;
     
-    log("删除已有图书");
+    log(I,"del_book():删除已有图书");
     string del_isbn;
     Book target;
     bool retry=true;
@@ -1416,11 +1470,11 @@ MenuState del_book(struct ListData &Dat,struct GlobalSettings &Cfg){
         if(del_isbn=="0"){return MANAGE_BOOK;}
         try{
             target=Booklist_isbn(book_list,del_isbn);
-            log("按ISBN寻书成功");
+            log(I,"del_book():按ISBN寻书成功");
             retry=false;
         }
         catch(const exception& e){
-            log("按ISBN寻书失败");
+            log(F,"del_book():按ISBN寻书失败");
             cerr<<e.what()<<'\n';
             pause();
         }
@@ -1431,12 +1485,12 @@ MenuState del_book(struct ListData &Dat,struct GlobalSettings &Cfg){
     if(check("请确认要删除的图书信息")){
         Booklist_delbook(book_list,del_isbn);
         Booklist_save(book_list,BOOKCSV);
-        log("确认删除图书信息，ISBN："+del_isbn);
+        log(I,"del_book():确认删除图书信息，ISBN："+del_isbn);
         o("删除成功！");
         pause();
         return MANAGE_BOOK;
     }else{
-        log("取消删除图书信息");
+        log(I,"del_book():取消删除图书信息");
         return MANAGE_BOOK;
     }
 
@@ -1449,7 +1503,7 @@ MenuState edit_book(struct ListData &Dat,struct GlobalSettings &Cfg){
     double &PRICE_MAX=Cfg.PRICE_MAX;
     string &BOOKCSV=Cfg.BOOKCSV;
     int &TAB=Cfg.TAB;
-    log("编辑指定图书");
+    log(I,"edit_book():编辑指定图书");
     string edit_isbn;
     bool retry=true;
 
@@ -1460,7 +1514,7 @@ MenuState edit_book(struct ListData &Dat,struct GlobalSettings &Cfg){
         if(edit_isbn=="0"){return MANAGE_BOOK;}
         try{
             Book& target=Booklist_isbn(book_list,edit_isbn);
-            log("按ISBN寻书成功");
+            log(I,"edit_book():按ISBN寻书成功");
             Booklist_infoheading(TAB);
             target.showinfo(TAB);
             retry=false;
@@ -1476,11 +1530,11 @@ MenuState edit_book(struct ListData &Dat,struct GlobalSettings &Cfg){
             switch(c){
             case 1:
                 target.change_title(input);
-                log("修改书名："+input);
+                log(I,"edit_book():修改书名："+input);
                 break;
             case 2:
                 target.change_author(input);
-                log("修改作者："+input);
+                log(I,"edit_book():修改作者："+input);
                 break;
             case 3:
                 while(input=="0"){
@@ -1490,15 +1544,15 @@ MenuState edit_book(struct ListData &Dat,struct GlobalSettings &Cfg){
                     oi(input,"该ISBN已存在！请重新输入");
                 }
                 target.change_isbn(input);
-                log("修改ISBN："+input);
+                log(I,"edit_book():修改ISBN："+input);
                 break;
             case 4:
                 target.change_press(input);
-                log("修改出版社："+input);
+                log(I,"edit_book():修改出版社："+input);
                 break;
             case 5:
                 target.change_date(input);
-                log("修改出版日期："+input);
+                log(I,"edit_book():修改出版日期："+input);
                 break;
             case 6:
                 retry=true;
@@ -1507,7 +1561,7 @@ MenuState edit_book(struct ListData &Dat,struct GlobalSettings &Cfg){
                         double cast_double=stod(input);
                         if(cast_double>0&&cast_double<=PRICE_MAX){
                             target.change_price(cast_double);
-                            log("修改单价："+input);
+                            log(I,"edit_book():修改单价："+input);
                             retry=false;
                         }else if(cast_double<0){
                             cerr<<"单价必须大于0！"<<endl;
@@ -1541,7 +1595,7 @@ MenuState edit_book(struct ListData &Dat,struct GlobalSettings &Cfg){
                         int cast_int=stoi(input);
                         if(cast_int>0&&cast_int>=target.STOCK()){
                             target.change_quantity(cast_int);
-                            log("修改总数："+input);
+                            log(I,"edit_book():修改总数："+input);
                             retry=false;
                         }else{
                             cerr<<"总数必须大于0且大于等于当前库存！"<<endl;
@@ -1569,7 +1623,7 @@ MenuState edit_book(struct ListData &Dat,struct GlobalSettings &Cfg){
                         int cast_int=stoi(input);
                         if(cast_int>0&&cast_int<=target.QUANTITY()){
                             target.change_stock(cast_int);
-                            log("修改总数："+input);
+                            log(I,"edit_book():修改总数："+input);
                             retry=false;
                         }else{
                             cerr<<"库存必须大于0且小于等于总数！"<<endl;
@@ -1602,7 +1656,7 @@ MenuState edit_book(struct ListData &Dat,struct GlobalSettings &Cfg){
             op("修改成功！");
         }
         catch(const exception& e){
-            log("按ISBN寻书失败");
+            log(F,"edit_book():按ISBN寻书失败");
             cerr<<e.what()<<'\n';
             pause();
         }
@@ -1616,7 +1670,7 @@ MenuState manage_user_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
     vector<User> &user_list=Dat.UserList;
     int &TAB=Cfg.TAB;
 
-    log("进入用户管理菜单");
+    log(I,"manage_user_menu():进入用户管理菜单");
     title("用户管理");
     cls();
 
@@ -1687,7 +1741,7 @@ MenuState manage_user_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
 MenuState query_user(struct ListData &Dat,struct GlobalSettings &Cfg){
     vector<User> &user_list=Dat.UserList;
     int &TAB=Cfg.TAB;
-    log("查询所有用户信息");
+    log(I,"query_user():查询所有用户信息");
     
     cls();
     CT("借阅人管理\\查询所有借阅人信息");
@@ -1704,7 +1758,7 @@ MenuState add_user(struct ListData &Dat,struct GlobalSettings &Cfg){
     string &USERCSV=Cfg.USERCSV;
     int &TAB=Cfg.TAB;
 
-    log("添加新的用户信息");
+    log(I,"add_user():添加新的用户信息");
     cls();
     CT("借阅人管理\\添加新的借阅人信息");
 
@@ -1765,13 +1819,13 @@ MenuState add_user(struct ListData &Dat,struct GlobalSettings &Cfg){
     if(check("请确认新的用户信息")){
         user_list.push_back(new_user);
         Userlist_save(user_list,USERCSV);
-        log("确认添加新的用户信息");
+        log(I,"add_user():确认添加新的用户信息");
 
         o("添加成功！");
         pause();
         return MAIN;
     }else{
-        log("取消添加新的用户信息");
+        log(I,"add_user():取消添加新的用户信息");
         return MAIN;
     }
     //pause();
@@ -1783,7 +1837,7 @@ MenuState del_user(struct ListData &Dat,struct GlobalSettings &Cfg){
     string &USERCSV=Cfg.USERCSV;
     int &TAB=Cfg.TAB;
     
-    log("删除已有用户信息");
+    log(I,"del_user():删除已有用户信息");
     string del_id;
     vector<User> target;
     bool retry=true;
@@ -1795,11 +1849,11 @@ MenuState del_user(struct ListData &Dat,struct GlobalSettings &Cfg){
         if(del_id=="0"){return MAIN;}
         try{
             target=Userlist_search(user_list,del_id,User::ID);
-            log("按ID寻找用户成功");
+            log(I,"del_user():按ID寻找用户成功");
             retry=false;
         }
         catch(const exception& e){
-            log("按ID寻找用户失败");
+            log(F,"del_user():按ID寻找用户失败");
             cerr<<e.what()<<'\n';
             pause();
         }
@@ -1817,12 +1871,12 @@ MenuState del_user(struct ListData &Dat,struct GlobalSettings &Cfg){
     if(check("请确认要删除的借阅人信息")){
         Userlist_deluser(user_list,del_id);
         Userlist_save(user_list,USERCSV);
-        log("确认删除用户信息，ID："+del_id);
+        log(I,"del_user():确认删除用户信息，ID："+del_id);
         o("删除成功！");
         pause();
         return MAIN;
     }else{
-        log("取消删除图书信息");
+        log(I,"del_user():取消删除图书信息");
         return MAIN;
     }
 
@@ -1835,7 +1889,7 @@ MenuState edit_user(struct ListData &Dat,struct GlobalSettings &Cfg){
     string &USERCSV=Cfg.USERCSV;
     int &TAB=Cfg.TAB;
     
-    log("修改指定用户信息");
+    log(I,"edit_user():修改指定用户信息");
     string edit_id;
     bool retry=true;
     while(retry&&edit_id!="0"){
@@ -1845,7 +1899,7 @@ MenuState edit_user(struct ListData &Dat,struct GlobalSettings &Cfg){
         if(edit_id=="0"){return MAIN;}
         try{
            User& target=Userlist_element_id(user_list,edit_id);
-           log("按ID寻找用户成功");
+           log(I,"edit_user():按ID寻找用户成功");
            Userlist_infoheading(TAB);
            target.showinfo(TAB);
            retry=false;
@@ -1862,7 +1916,7 @@ MenuState edit_user(struct ListData &Dat,struct GlobalSettings &Cfg){
            switch(c){
             case 1:
                 target.change_name(input);
-                log("修改名字："+input);
+                log(I,"edit_user():修改名字："+input);
                 break;
             case 2:
                 while(input=="0"){
@@ -1872,14 +1926,14 @@ MenuState edit_user(struct ListData &Dat,struct GlobalSettings &Cfg){
                     oi(input,"该ID已存在！请重新输入");
                 }
                 target.change_id(input);
-                log("修改ID："+input);
+                log(I,"edit_user():修改ID："+input);
                 break;
             case 3:
                 while(input!="A"&&input!="N"&&input!="B"){
                     oi(input,"用户状态只能是A（管理员用户）,N（普通用户）或B（黑名单用户）！请重新输入");
                 }
                 target.change_status(input);
-                log("修改用户状态"+input);
+                log(I,"edit_user():修改用户状态"+input);
                 break;
             case 4:
                 op("借阅列表请在借书/还书菜单中操作！即将跳转至主菜单");
@@ -1896,7 +1950,7 @@ MenuState edit_user(struct ListData &Dat,struct GlobalSettings &Cfg){
            op("修改成功！");
         }
         catch(const exception& e){
-            log("按ID寻找用户失败");
+            log(F,"edit_user():按ID寻找用户失败");
             cerr << e.what() << '\n';
             pause();
         }
@@ -1907,7 +1961,7 @@ MenuState edit_user(struct ListData &Dat,struct GlobalSettings &Cfg){
 
 //图书报损菜单
 MenuState report_book_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
-    log("进入图书报损菜单");
+    log(I,"report_book_menu():进入图书报损菜单");
     title("图书报损");
     CT("图书报损");
     
@@ -1938,7 +1992,7 @@ MenuState report_damage(struct ListData &Dat,struct GlobalSettings &Cfg){
     string &BOOKCSV=Cfg.BOOKCSV;
     string &USERCSV=Cfg.USERCSV;
 
-    log("进入受损报告菜单");
+    log(I,"report_damage():进入受损报告菜单");
     CT("图书报损\\受损报告");
 
     string report_book_isbn;
@@ -1946,7 +2000,6 @@ MenuState report_damage(struct ListData &Dat,struct GlobalSettings &Cfg){
     while(!book_exist(book_list,report_book_isbn)||!Booklist_isbn(book_list,report_book_isbn).isborrowed()){
         oi(report_book_isbn,"无法找到书籍！请重新输入");
     }
-    log("bug");
     Booklist_infoheading(TAB,false);
     Booklist_isbn(book_list,report_book_isbn).showinfo(TAB);
 
@@ -1955,7 +2008,7 @@ MenuState report_damage(struct ListData &Dat,struct GlobalSettings &Cfg){
         Userlist_element_id(user_list,"0").borrow(report_book_isbn);
         Booklist_save(book_list,BOOKCSV);
         Userlist_save(user_list,USERCSV);
-        log("成功报损");
+        log(I,"report_damage():成功报损");
         op("成功报损，即将返回主菜单！");
         return MAIN;
     }else{
@@ -1971,7 +2024,7 @@ MenuState report_fix(struct ListData &Dat,struct GlobalSettings &Cfg){
     string &BOOKCSV=Cfg.BOOKCSV;
     string &USERCSV=Cfg.USERCSV;
 
-    log("进入受损报告菜单");
+    log(I,"report_fix():进入受损报告菜单");
     CT("图书报损\\修复报告");
 
     vector<string> damage_list=Userlist_element_id(user_list,"0").BORROWED_LIST();
@@ -1998,7 +2051,7 @@ MenuState report_fix(struct ListData &Dat,struct GlobalSettings &Cfg){
     Booklist_save(book_list,BOOKCSV);
     Userlist_borrowed_isbn(user_list,report_book_isbn).returnBook(report_book_isbn);
     Userlist_save(user_list,USERCSV);
-    log("成功修复");
+    log(I,"report_fix():成功修复");
     op("成功修复。即将返回主菜单！");
 
     return MAIN;
@@ -2011,7 +2064,7 @@ MenuState setting_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
     int &TAB=Cfg.TAB;
     double &PRICE_MAX=Cfg.PRICE_MAX;
 
-    log("进入设置菜单");
+    log(I,"setting_menu():进入设置菜单");
     CT("设置");
 
     vector<string> ops={"TAB制表符长度（展示详细信息时）："+to_string(TAB),"TAB制表符长度（展示简要信息时）："+to_string(BRIEFTAB),"新添加书籍的最大单价："+to_string(PRICE_MAX),"日志记录文件："+LOG,"清除日志记录"};
@@ -2035,7 +2088,7 @@ MenuState setting_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
             oi(temp,"输入不合法！请重新输入");
         }
         BRIEFTAB=temp;
-        log("BRIEFTAB"+to_string(BRIEFTAB));
+        log(I,"setting_menu():BRIEFTAB"+to_string(BRIEFTAB));
         return SETTING;
         break;
     }
@@ -2047,7 +2100,7 @@ MenuState setting_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
             oi(temp,"输入不合法！请重新输入");
         }
         PRICE_MAX=temp;
-        log("PRICE_MAX:"+to_string(PRICE_MAX));
+        log(I,"setting_menu():PRICE_MAX:"+to_string(PRICE_MAX));
         return SETTING;
         break;
     }
@@ -2056,14 +2109,14 @@ MenuState setting_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
         string temp;
         oi(temp,"请输入用于存放日志的文件名");
         LOG=temp;
-        log("LOG"+temp);
+        log(I,"setting_menu():LOG:"+temp);
         return SETTING;
         break;
     }
 
     case 5:
         if(remove(LOG.c_str())==0){
-            log("日志清除成功！");
+            log(I,"setting_menu():日志清除成功！");
             op("清除成功！");
             return SETTING;
         }else{
@@ -2093,7 +2146,7 @@ void restart(){
 }
 
 int main(){
-    log("-----程序启动-----");
+    log(I,"-----程序启动-----");
     title("程序初始化");
 
     //默认设置
@@ -2231,7 +2284,7 @@ int main(){
     Booklist_save(Dat.BookList,Cfg.BOOKCSV);
     Userlist_save(Dat.UserList,Cfg.USERCSV);
 
-    log("程序默认结束");
+    log(I,"程序默认结束");
     
     cls();
     pause();
