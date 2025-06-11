@@ -45,7 +45,7 @@ class Log{
 
         
         //日志记录
-        int log(const logtype lt=I,const string &text){
+        int log(const logtype lt,const string &text){
             lock_guard<mutex> lock(mutex_);
             //获取时间
             auto now=chrono::system_clock::now();
@@ -96,7 +96,7 @@ class Log{
         mutex mutex_;
 };
 //日志记录
-int log(logtype lt,const string &text){
+void log(logtype lt,const string &text){
     Log::getInstance().log(lt,text);
 }
 void setlogpath(const string LOG){
@@ -2108,6 +2108,7 @@ MenuState setting_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
     case 4:{
         string temp;
         oi(temp,"请输入用于存放日志的文件名");
+        Log::getInstance().setlogfile(temp);
         LOG=temp;
         log(I,"setting_menu():LOG:"+temp);
         return SETTING;
