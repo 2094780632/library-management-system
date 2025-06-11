@@ -1931,7 +1931,7 @@ MenuState report_book_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
 MenuState report_damage(struct ListData &Dat,struct GlobalSettings &Cfg){
     vector<Book> &book_list=Dat.BookList;
     vector<User> &user_list=Dat.UserList;
-    int &BRIEFTAB=Cfg.BRIEFTAB;
+    int &TAB=Cfg.TAB;
     string &BOOKCSV=Cfg.BOOKCSV;
     string &USERCSV=Cfg.USERCSV;
 
@@ -1940,15 +1940,12 @@ MenuState report_damage(struct ListData &Dat,struct GlobalSettings &Cfg){
 
     string report_book_isbn;
     oi(report_book_isbn,"请输入受损图书的ISBN");
-    while(book_exist(book_list,report_book_isbn)){
+    while(!book_exist(book_list,report_book_isbn)||!Booklist_isbn(book_list,report_book_isbn).isborrowed()){
         oi(report_book_isbn,"无法找到书籍！请重新输入");
     }
-    while(!Booklist_isbn(book_list,report_book_isbn).isborrowed()){
-        oi(report_book_isbn,"无人借阅过此书！请重新输入");
-    }
-    
-    Booklist_briefheading(false,BRIEFTAB);
-    Booklist_isbn(book_list,report_book_isbn).briefinfo(BRIEFTAB);
+    log("bug");
+    Booklist_infoheading(TAB,false);
+    Booklist_isbn(book_list,report_book_isbn).showinfo(TAB);
 
     if(check("请确认受损图书信息")){
         Booklist_isbn(book_list,report_book_isbn).borrow(1);
@@ -1967,7 +1964,7 @@ MenuState report_damage(struct ListData &Dat,struct GlobalSettings &Cfg){
 MenuState report_fix(struct ListData &Dat,struct GlobalSettings &Cfg){
     vector<Book> &book_list=Dat.BookList;
     vector<User> &user_list=Dat.UserList;
-    int &BRIEFTAB=Cfg.BRIEFTAB;
+    int &TAB=Cfg.TAB;
     string &BOOKCSV=Cfg.BOOKCSV;
     string &USERCSV=Cfg.USERCSV;
 
@@ -1982,9 +1979,9 @@ MenuState report_fix(struct ListData &Dat,struct GlobalSettings &Cfg){
         return MAIN;
     }
 
-    Booklist_briefheading(false,BRIEFTAB);
+    Booklist_infoheading(TAB,false);
     for(auto& list_isbn:damage_list){
-        Booklist_isbn(book_list,list_isbn).briefinfo(BRIEFTAB);
+        Booklist_isbn(book_list,list_isbn).showinfo(TAB);
     }
     oi(report_book_isbn,"请输入修复的书籍的ISBN");
     auto it=find(damage_list.begin(),damage_list.end(),report_book_isbn);
@@ -1998,6 +1995,8 @@ MenuState report_fix(struct ListData &Dat,struct GlobalSettings &Cfg){
     Booklist_save(book_list,BOOKCSV);
     Userlist_borrowed_isbn(user_list,report_book_isbn).returnBook(report_book_isbn);
     Userlist_save(user_list,USERCSV);
+    log("成功修复");
+    op("成功修复。即将返回主菜单！");
 
     return MAIN;
 }
