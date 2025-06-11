@@ -929,7 +929,7 @@ MenuState main_menu(){
     cls();
     //menu_level=0;
 
-    vector<string> ops={"借书","还书","查书","图书管理","借阅人管理","图书报损","退出程序"};
+    vector<string> ops={"借书","还书","查书","图书管理","借阅人管理","图书报损","设置","退出程序"};
     CT("主菜单");
 
     int c=option(ops,false);;//存储用户选择的整型变量
@@ -953,6 +953,9 @@ MenuState main_menu(){
             return REPORT_BOOK;
             break;
         case 7:
+            return SETTING;
+            break;
+        case 8:
             return EXIT;
             break;
         default:
@@ -1525,7 +1528,7 @@ MenuState edit_book(struct ListData &Dat,struct GlobalSettings &Cfg){
                         cerr<<"输入的单价超出了范围！"<<endl;
                         oi(input,"请重新输入");
                     }
-                    catch(const std::exception& e){
+                    catch(const exception& e){
                         cerr << e.what() << '\n';
                         oi(input,"请重新输入");
                     }
@@ -1553,7 +1556,7 @@ MenuState edit_book(struct ListData &Dat,struct GlobalSettings &Cfg){
                         cerr<<"输入的总数超出了范围！"<<endl;
                         oi(input,"请重新输入");
                     }
-                    catch(const std::exception& e){
+                    catch(const exception& e){
                         cerr << e.what() << '\n';
                         oi(input,"请重新输入");
                     }
@@ -1581,7 +1584,7 @@ MenuState edit_book(struct ListData &Dat,struct GlobalSettings &Cfg){
                         cerr<<"输入的总数超出了范围！"<<endl;
                         oi(input,"请重新输入");
                     }
-                    catch(const std::exception& e){
+                    catch(const exception& e){
                         cerr << e.what() << '\n';
                         oi(input,"请重新输入");
                     }
@@ -1718,7 +1721,7 @@ MenuState add_user(struct ListData &Dat,struct GlobalSettings &Cfg){
                 oi(new_name,"该名字已存在！请重新输入");
             }
         }
-        catch(const std::exception& e){
+        catch(const exception& e){
             retry=false;
         }
     }
@@ -1892,7 +1895,7 @@ MenuState edit_user(struct ListData &Dat,struct GlobalSettings &Cfg){
            Userlist_save(user_list,USERCSV);
            op("修改成功！");
         }
-        catch(const std::exception& e){
+        catch(const exception& e){
             log("按ID寻找用户失败");
             cerr << e.what() << '\n';
             pause();
@@ -2003,8 +2006,82 @@ MenuState report_fix(struct ListData &Dat,struct GlobalSettings &Cfg){
 
 //设置
 MenuState setting_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
+    string &LOG=Cfg.LOG;
+    int &BRIEFTAB=Cfg.BRIEFTAB;
+    int &TAB=Cfg.TAB;
+    double &PRICE_MAX=Cfg.PRICE_MAX;
+
     log("进入设置菜单");
     CT("设置");
+
+    vector<string> ops={"TAB制表符长度（展示详细信息时）："+to_string(TAB),"TAB制表符长度（展示简要信息时）："+to_string(BRIEFTAB),"新添加书籍的最大单价："+to_string(PRICE_MAX),"日志记录文件："+LOG,"清除日志记录"};
+    int c=option(ops,true);
+
+    switch(c){
+    case 1:{
+        int temp;
+        oi(temp,"请输入一个在1-50内的一个数\n数字越小信息越“拥挤”");
+        while(temp<1||temp>50){
+            oi(temp,"输入不合法！请重新输入");
+        }
+        TAB=temp;
+        return SETTING;
+        break;
+    }
+    case 2:{
+        int temp;
+        oi(temp,"请输入一个在1-50内的一个数\n建议比TAB大10左右即可");
+        while(temp<1||temp>50){
+            oi(temp,"输入不合法！请重新输入");
+        }
+        BRIEFTAB=temp;
+        log("BRIEFTAB"+to_string(BRIEFTAB));
+        return SETTING;
+        break;
+    }
+        
+    case 3:{
+        double temp;
+        oi(temp,"请输入一个在1-10000内的一个数");
+        while(temp<1||temp>10000){
+            oi(temp,"输入不合法！请重新输入");
+        }
+        PRICE_MAX=temp;
+        log("PRICE_MAX:"+to_string(PRICE_MAX));
+        return SETTING;
+        break;
+    }
+
+    case 4:{
+        string temp;
+        oi(temp,"请输入用于存放日志的文件名");
+        LOG=temp;
+        log("LOG"+temp);
+        return SETTING;
+        break;
+    }
+
+    case 5:
+        if(remove(LOG.c_str())==0){
+            log("日志清除成功！");
+            op("清除成功！");
+            return SETTING;
+        }else{
+            cerr<<"日志文件删除失败！"<<endl;
+            perror("错误原因");
+            pause();
+        }
+        break;
+    
+    case 0:
+        return MAIN;
+        break;
+
+    default:
+        return SETTING;
+        break;
+    }
+
     return MAIN;
 }
 
@@ -2055,7 +2132,7 @@ int main(){
 
     pause();
 
-    MenuState menu_state= MAIN;
+    MenuState menu_state=MAIN;
 
     while(menu_state!=EXIT){
         cls();
