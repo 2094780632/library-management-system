@@ -13,6 +13,15 @@
 #include<mutex>
 using namespace std;
 
+/*
+#define LOG "log.txt"//存放日志的文件
+#define BOOKCSV "test.csv"//存放图书数据的文件
+#define USERCSV "user.csv"//存放用户数据的文件  
+#define TAB 20//TAB制表符长度
+#define BRIEFTAB 30//简要信息制表符长度
+#define PRICE_MAX 10000//最大单价
+*/
+
 ///全局数据与设置
 //日志记录系统
 //log类型
@@ -74,6 +83,7 @@ class Log{
 
             string log_str=log_time+":["+logt+']'+text+'\n';
             logs<<log_str;
+            //logs.close();
             return 0;
         }
                 
@@ -411,12 +421,14 @@ class Book{
             o(price,2,TAB);
             o(to_string(quantity),TAB);
             o(to_string(stock),TAB);
+            //o(to_string(isfree),TAB);
             o("");
         }
 
         //简要信息展示
         void briefinfo(int &BRIEFTAB){
             o(title,BRIEFTAB);
+            //o(author,TAB);
             o(to_string(stock),BRIEFTAB);
             o("");
         }
@@ -455,6 +467,7 @@ class Book{
             o(to_string(price));
             o(to_string(quantity));
             o(to_string(stock));
+            //o(to_string(isfree));
             o("");
         }
 
@@ -464,6 +477,8 @@ class Book{
             ss<<fixed<<setprecision(2);
             ss<<title<<','<<author<<','<<isbn<<','<<press<<','<<date<<','<<price<<','<<quantity<<','<<stock;
             return ss.str();
+            
+            //return title+','+author+','+isbn+','+press+','+date+','+to_string(price)+','+to_string(quantity)+','+to_string(stock);
         }
 
     private:
@@ -509,6 +524,7 @@ void Booklist_save(vector<Book>& book_list,string csv){
         save+=book.savestr()+'\n';
     }
     f_write(csv,save,"trunc");
+    //log("Booklist save:\n"+save);
 }
 
 //读取图书内容
@@ -559,6 +575,7 @@ void Booklist_briefheading(bool isid,int &BRIEFTAB){
     CG C(YELLOW);
     if(isid){o("序号",BRIEFTAB);}
     o("书名",BRIEFTAB);
+    //o("作者",TAB);
     o("可借数量",BRIEFTAB);
     o("");
 }
@@ -605,15 +622,42 @@ vector<Book> Booklist_search(vector<Book>& book_list,string key,string (Book::*p
     for(auto& book:book_list){
         if((book.*pfunc)()==key){target_list.push_back(book);}
     }
+    //log("cash");
     if(target_list.empty()){
         log(F,"Booklist_search():无法找到指定书目,key:"+key);
         throw runtime_error("无法找到指定书目");
     }
     return target_list;
+    //log("done");
 }
+
+/*弃用方法 
+//克隆可被借阅的书单
+void Booklist_iffree_clone(vector<Book>& book_list,vector<Book>& book_list_free){
+    for(auto& book:book_list){
+        if(book.iffree()){
+            book_list_free.push_back(book);
+        }
+    }
+}
+
+//读取可被借阅图书内容
+void Booklist_info_isfree(vector<Book>& book_list,int &freesum){
+    log("尝试读取可被借阅图书数据");
+    int i=1;
+    for(auto& book:book_list){
+        if(book.isfree()){
+            o(i,TAB);
+            freesum+=book.showinfo_iffree();//自动计算可借阅的总数，因为不可借阅会返回0
+            i++;
+        }
+    }
+}
+*/
 
 
 ///借阅人系统构建
+
 //vector[]转string
 string vetostr(vector<string> list){
     string str="[";
@@ -663,6 +707,7 @@ class User{
                 if(status=="N"){strstatus="普通用户";}
                 if(status=="B"){strstatus="黑名单用户";}
                 o(strstatus,TAB);
+                //o(vetostr(borrowed_list),TAB);
                 o(borrowed_list.size(),TAB);
                 o("");
             }
@@ -698,6 +743,7 @@ class User{
 
 //拆解列表
 vector<string> apartlist(string data){
+    //log("apartlist:"+data);debug
     vector<string> list={};
     if(data=="[]"){return list;}
     data.erase(0,1);//删头
@@ -750,8 +796,11 @@ void Userlist_defaultcsv(){
 //读取用户数据
 void Userlist_info(vector<User>& user_list,int &TAB){
     log(I,"Userlist_info():尝试读取用户数据");
+    //int i=1;
     for(auto& user:user_list){
+        //o(i,TAB);
         user.showinfo(TAB);
+        //i++;
     }
 }
 
@@ -772,6 +821,7 @@ void Userlist_save(vector<User>& user_list,string csv){
         save+=user.savestr()+'\n';
     }
     f_write(csv,save,"trunc");
+   //log("Userlist save:\n"+save);
 }
 
 //查询用户是否存在
@@ -829,11 +879,13 @@ vector<User> Userlist_search(vector<User>& user_list,string key,string (User::*p
     for(auto& user:user_list){
         if((user.*pfunc)()==key){target_list.push_back(user);}
     }
+    //log("cash");
     if(target_list.empty()){
         log(F,"Userlist_search():无法找到指定用户,key:"+key);
         throw runtime_error("无法找到指定用户");
     }
     return target_list;
+    //log("done");
 }
 
 //删除指定ID用户
@@ -845,6 +897,7 @@ void Userlist_deluser(vector<User>& user_list,string id){
 bool login(vector<User>& user_list,string &puser){
     log(I,"login():尝试登录");
     string username;
+    //o("登录");
 
     CT("登录");
 
@@ -855,6 +908,7 @@ bool login(vector<User>& user_list,string &puser){
     try{
         Userlist_search(user_list,username,pfunc);
         log(I,"login:登录成功");
+        //op("登录成功！");
         puser=username;
         return true;
     }
@@ -867,18 +921,19 @@ bool login(vector<User>& user_list,string &puser){
     }
 }
 
+
 ///菜单系统：
 /*
 主菜单
     -借书
     -还书
-    -查书
+    -查书//查询指定条件的图书
         -按书名查找
         -按作者查找
         -按借阅人查找
         -按ISBN查找
     -图书管理
-        -查询图书信息
+        -查询图书信息//列出所有图书
         -添加新的图书
         -删除已有图书
         -修改已有图书
@@ -926,6 +981,7 @@ MenuState main_menu(){
     log(I,"main_menu():进入主菜单");
     title("图书馆管理系统");
     cls();
+    //menu_level=0;
 
     vector<string> ops={"借书","还书","查书","图书管理","借阅人管理","图书报损","设置","退出程序"};
     CT("主菜单");
@@ -992,6 +1048,8 @@ MenuState borrow_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
     Booklist_briefheading(true,BRIEFTAB);
 
     int freenum=0;
+    
+    //Booklist_info_iffree(book_list,freenum);
 
     //创建可被借阅的书的索引
     vector<int> free_index;
@@ -999,6 +1057,8 @@ MenuState borrow_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
     for(size_t i=0;i<book_list.size();++i){
         if(book_list[i].isfree()){
             templist.push_back(book_list[i]);
+            //o(to_string(freenum+1),BRIEFTAB);
+            //book_list[i].briefinfo(BRIEFTAB);
             free_index.push_back(i);
             freenum++;
         }
@@ -1015,6 +1075,8 @@ MenuState borrow_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
 
     cout<<"总计"<<freenum<<"本可被借阅的不同书籍。"<<endl;
     
+    //vector<Book> book_list_free;
+
     int bookid_to_choose;
     o("请输入要借阅的书籍序号（输入0返回上一级）");
     i(bookid_to_choose,0,freenum);
@@ -1039,6 +1101,8 @@ MenuState borrow_menu(struct ListData &Dat,struct GlobalSettings &Cfg){
             op("书籍《"+book_list[index].TITLE()+"》借阅成功！");
             return MAIN;
         }
+        //Booklist_element(book_list,bookid_to_choose-1).showinfo();
+        //book_list[bookid_to_choose-1].showinfo();
     }
     return MAIN;
 }
@@ -1384,6 +1448,8 @@ MenuState add_book(struct ListData &Dat,struct GlobalSettings &Cfg){
         log(I,"add_book():取消添加新的图书信息");
         return MANAGE_BOOK;
     }
+
+    //pause();
     return MANAGE_BOOK;
 }
 
@@ -1595,6 +1661,7 @@ MenuState edit_book(struct ListData &Dat,struct GlobalSettings &Cfg){
             pause();
         }
     }
+
     return MANAGE_BOOK;
 }
 
@@ -1738,6 +1805,7 @@ MenuState add_user(struct ListData &Dat,struct GlobalSettings &Cfg){
         new_status="ERROR";
         break;
     }
+    //oi(new_status,"用户类型(A:管理员、N:普通用户、B:黑名单用户)");
     while(new_status!="A"&&new_status!="N"&&new_status!="B"){
         oi(new_status,"无效的用户类型！请重新输入");
     }
@@ -1760,6 +1828,7 @@ MenuState add_user(struct ListData &Dat,struct GlobalSettings &Cfg){
         log(I,"add_user():取消添加新的用户信息");
         return MAIN;
     }
+    //pause();
     return MAIN;
 }
 
@@ -2112,8 +2181,6 @@ int main(){
         restart();
     }
 
-    cout<<"默认设置"<<endl;
-    cout<<"Log file:"<<Cfg.LOG<<endl;
     cout<<"BookList CSV:"<<Cfg.BOOKCSV<<endl;
     cout<<"UserList CSV:"<<Cfg.USERCSV<<endl;
 
