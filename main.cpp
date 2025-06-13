@@ -1989,7 +1989,7 @@ MenuState report_fix(struct ListData &Dat,struct GlobalSettings &Cfg){
 
     string report_user_id;
     oi(report_user_id,"请输入损坏图书的借阅人ID");
-    while(!user_exist(user_list,report_user_id)||!Userlist_element_id(user_list,report_user_id).is_borrowed(report_book_isbn)||Userlist_element_id(user_list,report_user_id).STATUS()=="B"){
+    while(!user_exist(user_list,report_user_id)||!Userlist_element_id(user_list,report_user_id).is_borrowed(report_book_isbn)||Userlist_element_id(user_list,report_user_id).STATUS()!="B"){
         oi(report_user_id,"无法找到借阅人！请重新输入");
     }
 
