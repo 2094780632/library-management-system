@@ -1233,7 +1233,7 @@ MenuState search_book_by_user(struct ListData &Dat,struct GlobalSettings &Cfg){
 
     target_string=Userlist_element(user_list,username).BORROWED_LIST();
     cls();
-    CT("查书\\按借阅人查找");
+    CT("查书\\按借阅人查找\\"+username);
     if(vetostr(target_string)=="[]"){
         o("无借阅！");
     }else{
@@ -1931,12 +1931,21 @@ MenuState report_damage(struct ListData &Dat,struct GlobalSettings &Cfg){
     while(!book_exist(book_list,report_book_isbn)||!Booklist_isbn(book_list,report_book_isbn).isborrowed()){
         oi(report_book_isbn,"无法找到书籍！请重新输入");
     }
+    string report_user_id;
+    oi(report_user_id,"请输入损坏图书的借阅人ID");
+    while(!user_exist(user_list,report_user_id)||!Userlist_element_id(user_list,report_user_id).is_borrowed(report_book_isbn)){
+        oi(report_user_id,"无法找到借阅人！请重新输入");
+    }
+
     Booklist_infoheading(TAB,false);
     Booklist_isbn(book_list,report_book_isbn).showinfo(TAB);
+    Userlist_infoheading(TAB);
+    Userlist_element_id(user_list,report_user_id).showinfo(TAB);
 
-    if(check("请确认受损图书信息")){
+    if(check("请确认受损信息")){
         Booklist_isbn(book_list,report_book_isbn).borrow(1);
         Userlist_element_id(user_list,"0").borrow(report_book_isbn);
+        Userlist_element_id(user_list,report_user_id).change_status("B");
         Booklist_save(book_list,BOOKCSV);
         Userlist_save(user_list,USERCSV);
         log(I,"report_damage():成功报损");
@@ -1978,9 +1987,16 @@ MenuState report_fix(struct ListData &Dat,struct GlobalSettings &Cfg){
         auto it=find(damage_list.begin(),damage_list.end(),report_book_isbn);
     }
 
+    string report_user_id;
+    oi(report_user_id,"请输入损坏图书的借阅人ID");
+    while(!user_exist(user_list,report_user_id)||!Userlist_element_id(user_list,report_user_id).is_borrowed(report_book_isbn)||Userlist_element_id(user_list,report_user_id).STATUS()=="B"){
+        oi(report_user_id,"无法找到借阅人！请重新输入");
+    }
+
     Booklist_isbn(book_list,report_book_isbn).returnbook();
     Booklist_save(book_list,BOOKCSV);
     Userlist_borrowed_isbn(user_list,report_book_isbn).returnBook(report_book_isbn);
+    Userlist_element_id(user_list,report_user_id).change_status("N");
     Userlist_save(user_list,USERCSV);
     log(I,"report_fix():成功修复");
     op("成功修复。即将返回主菜单！");
@@ -2092,6 +2108,7 @@ int main(){
 
     Data Dat;
 
+    //尝试读取数据
     try{
         Booklist_init(Dat.BookList,Cfg.BOOKCSV);
     }
@@ -2112,13 +2129,14 @@ int main(){
         restart();
     }
 
-    cout<<"默认设置"<<endl;
+    //设置展示
     cout<<"Log file:"<<Cfg.LOG<<endl;
     cout<<"BookList CSV:"<<Cfg.BOOKCSV<<endl;
     cout<<"UserList CSV:"<<Cfg.USERCSV<<endl;
 
     pause();
 
+    //菜单跳转
     MenuState menu_state=MAIN;
 
     while(menu_state!=EXIT){
@@ -2215,6 +2233,7 @@ int main(){
         }
     }
 
+    //程序结束
     Booklist_save(Dat.BookList,Cfg.BOOKCSV);
     Userlist_save(Dat.UserList,Cfg.USERCSV);
 
